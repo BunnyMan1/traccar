@@ -10,3 +10,12 @@ Compile Web Modern:
 Deploy:
 - Server: Upload target/lib and target/tracker-server.jar to the server at /opt/traccar
 - Web modern: Upload /traccar-web/modern/build folder to the server at /opt/traccar/web/modern
+
+Transfer code command example:
+- rsync -a build nspira_gps:/home/bunny/build/
+
+Check server logs:
+- tail -f /opt/traccar/logs/tracker-server.log
+
+Check traccar service logs:
+- sudo journalctl -u traccar.service --since "2022-07-11" --no-pager
