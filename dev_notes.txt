@@ -1,0 +1,12 @@
+Compile Server:
+- gradle
+- ./gradlew assemble
+
+Compile Web Modern:
+- cd /traccar-web/modern
+- npm i
+- npm run build_release
+
+Deploy:
+- Server: Upload target/lib and target/tracker-server.jar to the server at /opt/traccar
+- Web modern: Upload /traccar-web/modern/build folder to the server at /opt/traccar/web/modern
