@@ -1,0 +1,31 @@
+Compile Server:
+- gradle
+- ./gradlew assemble
+
+Compile Web Modern:
+- cd /traccar-web/modern
+- npm i
+- npm run build_release
+
+Deploy:
+- Server: Upload target/lib and target/tracker-server.jar to the server at /opt/traccar
+- Web modern: Upload /traccar-web/modern/build folder to the server at /opt/traccar/web/modern
+
+Transfer code command example:
+- rsync -a build nspira_gps:/home/bunny/build/
+
+Check server logs:
+- tail -f /opt/traccar/logs/tracker-server.log
+- grep 866897057683700 tracker-server.log
+- For grep, add "-B 10" option to show +10 lines before the grep match line.
+
+Check traccar service logs:
+- sudo journalctl -u traccar.service --since "2022-07-11" --no-pager
+
+Test protocol message:
+- cd tools/
+- ./hex.sh 5089 2424434c49454e545f314e532c3232303530313036322c312c31372e3435363330362c37382e3338393339372c3232303633303030303030312c412c32332c302c3536333932392c3330322c32302c302e3538303030302c302c302c37322c302c302c302c302c302c302c302c302c302c302c302c312c302c302c302c302c302c302c302c302c302c302c302c302c302c302c302c302c302c302c302c302c31323435312c333934382c2a30380d0a
+
+Run server locally:
+- VSCode - Run with / without debugging
+- Web app - cd traccar-web/modern/ && npm run start
