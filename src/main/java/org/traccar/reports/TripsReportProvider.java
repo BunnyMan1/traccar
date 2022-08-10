@@ -67,7 +67,7 @@ public class TripsReportProvider {
         reportUtils.checkPeriodLimit(from, to);
 
         ArrayList<TripReportItem> result = new ArrayList<>();
-        for (Device device: reportUtils.getAccessibleDevices(userId, deviceIds, groupIds)) {
+        for (Device device : reportUtils.getAccessibleDevices(userId, deviceIds, groupIds)) {
             result.addAll(detectTrips(device, from, to));
         }
         return result;
@@ -78,28 +78,38 @@ public class TripsReportProvider {
             Date from, Date to) throws StorageException, IOException {
         reportUtils.checkPeriodLimit(from, to);
 
-        ArrayList<DeviceReportSection> devicesTrips = new ArrayList<>();
+        // ArrayList<DeviceReportSection> devicesTrips = new ArrayList<>();
         ArrayList<String> sheetNames = new ArrayList<>();
-        for (Device device: reportUtils.getAccessibleDevices(userId, deviceIds, groupIds)) {
+
+        // Have only 1 sheet for all devices data
+        sheetNames.add(WorkbookUtil.createSafeSheetName("Sheet1"));
+
+        DeviceReportSection<TripReportItem> allDevicesTrips = new DeviceReportSection<TripReportItem>();
+
+        for (Device device : reportUtils.getAccessibleDevices(userId, deviceIds, groupIds)) {
             Collection<TripReportItem> trips = detectTrips(device, from, to);
-            DeviceReportSection deviceTrips = new DeviceReportSection();
-            deviceTrips.setDeviceName(device.getName());
-            sheetNames.add(WorkbookUtil.createSafeSheetName(deviceTrips.getDeviceName()));
-            if (device.getGroupId() > 0) {
-                Group group = storage.getObject(Group.class, new Request(
-                        new Columns.All(), new Condition.Equals("id", "id", device.getGroupId())));
-                if (group != null) {
-                    deviceTrips.setGroupName(group.getName());
-                }
-            }
-            deviceTrips.setObjects(trips);
-            devicesTrips.add(deviceTrips);
+            // DeviceReportSection<TripReportItem> deviceTrips = new DeviceReportSection<TripReportItem>();
+            // deviceTrips.setDeviceName(device.getName());
+            // sheetNames.add(WorkbookUtil.createSafeSheetName(deviceTrips.getDeviceName()));
+            // if (device.getGroupId() > 0) {
+            //     Group group = storage.getObject(Group.class, new Request(
+            //             new Columns.All(), new Condition.Equals("id", "id", device.getGroupId())));
+            //     if (group != null) {
+            //         deviceTrips.setGroupName(group.getName());
+            //     }
+            // }
+            allDevicesTrips.addObjects(trips);
+            // deviceTrips.setObjects(trips);
+            // devicesTrips.add(deviceTrips);
         }
+
+        var singleTripsList = new ArrayList<DeviceReportSection<TripReportItem>>();
+        singleTripsList.add(allDevicesTrips); // Only 1 item contains all devices trips
 
         File file = Paths.get(config.getString(Keys.TEMPLATES_ROOT), "export", "trips.xlsx").toFile();
         try (InputStream inputStream = new FileInputStream(file)) {
             var context = reportUtils.initializeContext(userId);
-            context.putVar("devices", devicesTrips);
+            context.putVar("devices", singleTripsList);
             context.putVar("sheetNames", sheetNames);
             context.putVar("from", from);
             context.putVar("to", to);

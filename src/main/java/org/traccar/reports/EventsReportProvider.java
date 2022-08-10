@@ -75,7 +75,7 @@ public class EventsReportProvider {
         reportUtils.checkPeriodLimit(from, to);
 
         ArrayList<Event> result = new ArrayList<>();
-        for (Device device: reportUtils.getAccessibleDevices(userId, deviceIds, groupIds)) {
+        for (Device device : reportUtils.getAccessibleDevices(userId, deviceIds, groupIds)) {
             Collection<Event> events = getEvents(device.getId(), from, to);
             boolean all = types.isEmpty() || types.contains(Event.ALL_EVENTS);
             for (Event event : events) {
@@ -84,8 +84,8 @@ public class EventsReportProvider {
                     long maintenanceId = event.getMaintenanceId();
                     if ((geofenceId == 0 || reportUtils.getObject(userId, Geofence.class, geofenceId) != null)
                             && (maintenanceId == 0
-                            || reportUtils.getObject(userId, Maintenance.class, maintenanceId) != null)) {
-                       result.add(event);
+                                    || reportUtils.getObject(userId, Maintenance.class, maintenanceId) != null)) {
+                        result.add(event);
                     }
                 }
             }
@@ -98,15 +98,22 @@ public class EventsReportProvider {
             Collection<String> types, Date from, Date to) throws StorageException, IOException {
         reportUtils.checkPeriodLimit(from, to);
 
-        ArrayList<DeviceReportSection> devicesEvents = new ArrayList<>();
+        // ArrayList<DeviceReportSection<Event>> devicesEvents = new ArrayList<>();
         ArrayList<String> sheetNames = new ArrayList<>();
         HashMap<Long, String> geofenceNames = new HashMap<>();
         HashMap<Long, String> maintenanceNames = new HashMap<>();
-        for (Device device: reportUtils.getAccessibleDevices(userId, deviceIds, groupIds)) {
+
+        // Have only 1 sheet for all devices data
+        sheetNames.add(WorkbookUtil.createSafeSheetName("Sheet1"));
+
+        DeviceReportSection<Event> allDevicesEvents = new DeviceReportSection<Event>();
+
+        for (Device device : reportUtils.getAccessibleDevices(userId, deviceIds, groupIds)) {
             Collection<Event> events = getEvents(device.getId(), from, to);
             boolean all = types.isEmpty() || types.contains(Event.ALL_EVENTS);
             for (Iterator<Event> iterator = events.iterator(); iterator.hasNext();) {
                 Event event = iterator.next();
+                event.setDeviceName(device.getName());
                 if (all || types.contains(event.getType())) {
                     long geofenceId = event.getGeofenceId();
                     long maintenanceId = event.getMaintenanceId();
@@ -129,24 +136,29 @@ public class EventsReportProvider {
                     iterator.remove();
                 }
             }
-            DeviceReportSection deviceEvents = new DeviceReportSection();
-            deviceEvents.setDeviceName(device.getName());
-            sheetNames.add(WorkbookUtil.createSafeSheetName(deviceEvents.getDeviceName()));
-            if (device.getGroupId() > 0) {
-                Group group = storage.getObject(Group.class, new Request(
-                        new Columns.All(), new Condition.Equals("id", "id", device.getGroupId())));
-                if (group != null) {
-                    deviceEvents.setGroupName(group.getName());
-                }
-            }
-            deviceEvents.setObjects(events);
-            devicesEvents.add(deviceEvents);
+
+            // DeviceReportSection<Event> deviceEvents = new DeviceReportSection<Event>();
+            // deviceEvents.setDeviceName(device.getName());
+            // sheetNames.add(WorkbookUtil.createSafeSheetName(deviceEvents.getDeviceName()));
+            // if (device.getGroupId() > 0) {
+            // Group group = storage.getObject(Group.class, new Request(
+            // new Columns.All(), new Condition.Equals("id", "id", device.getGroupId())));
+            // if (group != null) {
+            // deviceEvents.setGroupName(group.getName());
+            // }
+            // }
+            allDevicesEvents.addObjects(events);
+            // deviceEvents.setObjects(events);
+            // devicesEvents.add(deviceEvents);
         }
+
+        var singleEventsList = new ArrayList<DeviceReportSection<Event>>();
+        singleEventsList.add(allDevicesEvents); // Only 1 item contains all devices events
 
         File file = Paths.get(config.getString(Keys.TEMPLATES_ROOT), "export", "events.xlsx").toFile();
         try (InputStream inputStream = new FileInputStream(file)) {
             var context = reportUtils.initializeContext(userId);
-            context.putVar("devices", devicesEvents);
+            context.putVar("devices", singleEventsList);
             context.putVar("sheetNames", sheetNames);
             context.putVar("geofenceNames", geofenceNames);
             context.putVar("maintenanceNames", maintenanceNames);

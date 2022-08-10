@@ -77,6 +77,16 @@ public class Event extends Message {
         this.eventTime = eventTime;
     }
 
+    private String deviceName;
+
+    public String getDeviceName() {
+        return deviceName;
+    }
+
+    public void setDeviceName(String deviceName) {
+        this.deviceName = deviceName;
+    }
+
     private long positionId;
 
     public long getPositionId() {

@@ -78,11 +78,11 @@ public class StopsReportProvider {
             Date from, Date to) throws StorageException, IOException {
         reportUtils.checkPeriodLimit(from, to);
 
-        ArrayList<DeviceReportSection> devicesStops = new ArrayList<>();
+        ArrayList<DeviceReportSection<StopReportItem>> devicesStops = new ArrayList<>();
         ArrayList<String> sheetNames = new ArrayList<>();
         for (Device device: reportUtils.getAccessibleDevices(userId, deviceIds, groupIds)) {
             Collection<StopReportItem> stops = detectStops(device, from, to);
-            DeviceReportSection deviceStops = new DeviceReportSection();
+            DeviceReportSection<StopReportItem> deviceStops = new DeviceReportSection<StopReportItem>();
             deviceStops.setDeviceName(device.getName());
             sheetNames.add(WorkbookUtil.createSafeSheetName(deviceStops.getDeviceName()));
             if (device.getGroupId() > 0) {
