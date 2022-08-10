@@ -230,7 +230,7 @@ public class AquilaProtocolDecoder extends BaseProtocolDecoder {
             position.set("sensorId", parser.nextInt());
             var sensorData = parser.next();
             position.set("sensorData", sensorData);
-            position.set(Position.KEY_IGNITION, sensorData == "1||");
+            // position.set(Position.KEY_IGNITION, sensorData != "1||");
 
         } else if (parser.hasNext(2)) {
 
