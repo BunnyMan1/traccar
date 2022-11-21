@@ -45,10 +45,11 @@ import org.traccar.handler.events.AlertEventHandler;
 import org.traccar.handler.events.BehaviorEventHandler;
 import org.traccar.handler.events.CommandResultEventHandler;
 import org.traccar.handler.events.DriverEventHandler;
-import org.traccar.handler.events.FuelDropEventHandler;
+import org.traccar.handler.events.FuelEventHandler;
 import org.traccar.handler.events.GeofenceEventHandler;
 import org.traccar.handler.events.IgnitionEventHandler;
 import org.traccar.handler.events.MaintenanceEventHandler;
+import org.traccar.handler.events.MediaEventHandler;
 import org.traccar.handler.events.MotionEventHandler;
 import org.traccar.handler.events.OverspeedEventHandler;
 
@@ -141,10 +142,11 @@ public abstract class BasePipelineFactory extends ChannelInitializer<Channel> {
                 ComputedAttributesHandler.class,
                 WebDataHandler.class,
                 DefaultDataHandler.class,
+                MediaEventHandler.class,
                 CommandResultEventHandler.class,
                 OverspeedEventHandler.class,
                 BehaviorEventHandler.class,
-                FuelDropEventHandler.class,
+                FuelEventHandler.class,
                 MotionEventHandler.class,
                 GeofenceEventHandler.class,
                 AlertEventHandler.class,

@@ -45,14 +45,13 @@ import org.slf4j.LoggerFactory;
 import org.traccar.LifecycleObject;
 import org.traccar.api.CorsResponseFilter;
 import org.traccar.api.DateParameterConverterProvider;
-import org.traccar.api.ObjectMapperProvider;
 import org.traccar.api.ResourceErrorHandler;
 import org.traccar.api.resource.ServerResource;
 import org.traccar.api.security.SecurityRequestFilter;
 import org.traccar.config.Config;
 import org.traccar.config.Keys;
+import org.traccar.helper.ObjectMapperContextResolver;
 
-import javax.inject.Inject;
 import javax.servlet.DispatcherType;
 import javax.servlet.ServletException;
 import javax.servlet.SessionCookieConfig;
@@ -64,6 +63,7 @@ import java.io.IOException;
 import java.io.Writer;
 import java.net.InetSocketAddress;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.EnumSet;
 
@@ -75,7 +75,6 @@ public class WebServer implements LifecycleObject {
     private final Config config;
     private final Server server;
 
-    @Inject
     public WebServer(Injector injector, Config config) {
         this.injector = injector;
         this.config = config;
@@ -104,9 +103,10 @@ public class WebServer implements LifecycleObject {
             @Override
             protected void handleErrorPage(
                     HttpServletRequest request, Writer writer, int code, String message) throws IOException {
-                if (code == HttpStatus.NOT_FOUND_404 && request.getPathInfo().startsWith("/modern")) {
-                    writer.write(Files.readString(
-                            Paths.get(config.getString(Keys.WEB_PATH), "modern", "index.html")));
+                Path index = Paths.get(config.getString(Keys.WEB_PATH), "index.html");
+                if (code == HttpStatus.NOT_FOUND_404
+                        && !request.getPathInfo().startsWith("/api/") && Files.exists(index)) {
+                    writer.write(Files.readString(index));
                 } else {
                     writer.write("<!DOCTYPE><html><head><title>Error</title></head><html><body>"
                             + code + " - " + HttpStatus.getMessage(code) + "</body></html>");
@@ -178,7 +178,7 @@ public class WebServer implements LifecycleObject {
         ResourceConfig resourceConfig = new ResourceConfig();
         resourceConfig.registerClasses(
                 JacksonFeature.class,
-                ObjectMapperProvider.class,
+                ObjectMapperContextResolver.class,
                 DateParameterConverterProvider.class,
                 SecurityRequestFilter.class,
                 CorsResponseFilter.class,

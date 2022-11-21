@@ -24,7 +24,7 @@ import org.traccar.storage.StorageName;
 import java.util.Date;
 
 @StorageName("tc_users")
-public class User extends ExtendedModel implements UserRestrictions {
+public class User extends ExtendedModel implements UserRestrictions, Disableable {
 
     private String name;
 
@@ -155,20 +155,24 @@ public class User extends ExtendedModel implements UserRestrictions {
 
     private boolean disabled;
 
+    @Override
     public boolean getDisabled() {
         return disabled;
     }
 
+    @Override
     public void setDisabled(boolean disabled) {
         this.disabled = disabled;
     }
 
     private Date expirationTime;
 
+    @Override
     public Date getExpirationTime() {
         return expirationTime;
     }
 
+    @Override
     public void setExpirationTime(Date expirationTime) {
         this.expirationTime = expirationTime;
     }
@@ -204,23 +208,6 @@ public class User extends ExtendedModel implements UserRestrictions {
         this.deviceReadonly = deviceReadonly;
     }
 
-    private String token;
-
-    public String getToken() {
-        return token;
-    }
-
-    public void setToken(String token) {
-        if (token != null && !token.isEmpty()) {
-            if (!token.matches("^[a-zA-Z0-9-]{16,}$")) {
-                throw new IllegalArgumentException("Illegal token");
-            }
-            this.token = token;
-        } else {
-            this.token = null;
-        }
-    }
-
     private boolean limitCommands;
 
     @Override
@@ -232,8 +219,6 @@ public class User extends ExtendedModel implements UserRestrictions {
         this.limitCommands = limitCommands;
     }
 
-    private String poiLayer;
-
     private boolean disableReports;
 
     @Override
@@ -244,6 +229,19 @@ public class User extends ExtendedModel implements UserRestrictions {
     public void setDisableReports(boolean disableReports) {
         this.disableReports = disableReports;
     }
+
+    private boolean fixedEmail;
+
+    @Override
+    public boolean getFixedEmail() {
+        return fixedEmail;
+    }
+
+    public void setFixedEmail(boolean fixedEmail) {
+        this.fixedEmail = fixedEmail;
+    }
+
+    private String poiLayer;
 
     public String getPoiLayer() {
         return poiLayer;

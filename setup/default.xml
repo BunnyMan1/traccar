@@ -11,8 +11,8 @@
     -->
 
     <entry key='web.port'>8082</entry>
-    <entry key='web.path'>./web</entry>
-    <entry key='web.sanitize'>true</entry>
+    <entry key='web.path'>./modern</entry>
+    <entry key='web.sanitize'>false</entry>
     <entry key='web.persistSession'>false</entry>
 
     <entry key='geocoder.enable'>true</entry>
@@ -283,5 +283,10 @@
     <entry key='armoli.port'>5238</entry>
     <entry key='teratrack.port'>5239</entry>
     <entry key='envotech.port'>5240</entry>
+    <entry key='bstpl.port'>5241</entry>
+    <entry key='thuraya.port'>5242</entry>
+    <entry key='ndtpv6.port'>5243</entry>
+    <entry key='g1rus.port'>5244</entry>
+    <entry key='rftrack.port'>5245</entry>
 
 </properties>

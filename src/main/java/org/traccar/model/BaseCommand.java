@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 - 2022 Anton Tananaev (anton@traccar.org)
+ * Copyright 2022 Anton Tananaev (anton@traccar.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,25 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.traccar.api;
+package org.traccar.model;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+public class BaseCommand extends Message {
 
-import javax.inject.Inject;
-import javax.ws.rs.ext.ContextResolver;
+    private String description;
 
-public class ObjectMapperProvider implements ContextResolver<ObjectMapper> {
-
-    private final ObjectMapper objectMapper;
-
-    @Inject
-    public ObjectMapperProvider(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
+    public String getDescription() {
+        return description;
     }
 
-    @Override
-    public ObjectMapper getContext(Class<?> type) {
-        return objectMapper;
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    private boolean textChannel;
+
+    public boolean getTextChannel() {
+        return textChannel;
+    }
+
+    public void setTextChannel(boolean textChannel) {
+        this.textChannel = textChannel;
     }
 
 }

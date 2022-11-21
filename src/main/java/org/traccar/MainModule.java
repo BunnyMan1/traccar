@@ -62,7 +62,11 @@ import org.traccar.geolocation.UnwiredGeolocationProvider;
 import org.traccar.handler.GeocoderHandler;
 import org.traccar.handler.GeolocationHandler;
 import org.traccar.handler.SpeedLimitHandler;
+import org.traccar.helper.ObjectMapperContextResolver;
 import org.traccar.helper.SanitizerModule;
+import org.traccar.mail.LogMailManager;
+import org.traccar.mail.MailManager;
+import org.traccar.mail.SmtpMailManager;
 import org.traccar.notification.EventForwarder;
 import org.traccar.session.cache.CacheManager;
 import org.traccar.sms.HttpSmsClient;
@@ -78,7 +82,6 @@ import javax.annotation.Nullable;
 import javax.inject.Singleton;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
-import javax.ws.rs.ext.ContextResolver;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -96,10 +99,11 @@ public class MainModule extends AbstractModule {
     protected void configure() {
         bindConstant().annotatedWith(Names.named("configFile")).to(configFile);
         bind(Config.class).asEagerSingleton();
-        bind(Storage.class).to(DatabaseStorage.class);
+        bind(Storage.class).to(DatabaseStorage.class).in(Scopes.SINGLETON);
         bind(Timer.class).to(HashedWheelTimer.class).in(Scopes.SINGLETON);
     }
 
+    @Singleton
     @Provides
     public static ObjectMapper provideObjectMapper(Config config) {
         ObjectMapper objectMapper = new ObjectMapper();
@@ -107,14 +111,14 @@ public class MainModule extends AbstractModule {
             objectMapper.registerModule(new SanitizerModule());
         }
         objectMapper.registerModule(new JSR353Module());
-        objectMapper.setConfig(objectMapper
-                .getSerializationConfig().without(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS));
+        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         return objectMapper;
     }
 
+    @Singleton
     @Provides
-    public static Client provideClient(ObjectMapper objectMapper) {
-        return ClientBuilder.newClient().register((ContextResolver<ObjectMapper>) clazz -> objectMapper);
+    public static Client provideClient(ObjectMapperContextResolver objectMapperContextResolver) {
+        return ClientBuilder.newClient().register(objectMapperContextResolver);
     }
 
     @Singleton
@@ -126,6 +130,16 @@ public class MainModule extends AbstractModule {
             return new SnsSmsClient(config);
         }
         return null;
+    }
+
+    @Singleton
+    @Provides
+    public static MailManager provideMailManager(Config config, StatisticsManager statisticsManager) {
+        if (config.getBoolean(Keys.MAIL_DEBUG)) {
+            return new LogMailManager();
+        } else {
+            return new SmtpMailManager(config, statisticsManager);
+        }
     }
 
     @Singleton
@@ -254,6 +268,7 @@ public class MainModule extends AbstractModule {
         return null;
     }
 
+    @Singleton
     @Provides
     public static GeolocationHandler provideGeolocationHandler(
             Config config, @Nullable GeolocationProvider geolocationProvider, CacheManager cacheManager,
@@ -264,6 +279,7 @@ public class MainModule extends AbstractModule {
         return null;
     }
 
+    @Singleton
     @Provides
     public static GeocoderHandler provideGeocoderHandler(
             Config config, @Nullable Geocoder geocoder, CacheManager cacheManager) {
@@ -273,6 +289,7 @@ public class MainModule extends AbstractModule {
         return null;
     }
 
+    @Singleton
     @Provides
     public static SpeedLimitHandler provideSpeedLimitHandler(@Nullable SpeedLimitProvider speedLimitProvider) {
         if (speedLimitProvider != null) {
@@ -291,6 +308,7 @@ public class MainModule extends AbstractModule {
         return new NullBroadcastService();
     }
 
+    @Singleton
     @Provides
     public static EventForwarder provideEventForwarder(Config config, Client client, CacheManager cacheManager) {
         if (config.hasKey(Keys.EVENT_FORWARD_URL)) {
@@ -306,16 +324,18 @@ public class MainModule extends AbstractModule {
         properties.setProperty("file.resource.loader.path", config.getString(Keys.TEMPLATES_ROOT) + "/");
         properties.setProperty("runtime.log.logsystem.class", NullLogChute.class.getName());
 
-        String address;
-        try {
-            address = config.getString(Keys.WEB_ADDRESS, InetAddress.getLocalHost().getHostAddress());
-        } catch (UnknownHostException e) {
-            address = "localhost";
+        if (config.hasKey(Keys.WEB_URL)) {
+            properties.setProperty("web.url", config.getString(Keys.WEB_URL).replaceAll("/$", ""));
+        } else {
+            String address;
+            try {
+                address = config.getString(Keys.WEB_ADDRESS, InetAddress.getLocalHost().getHostAddress());
+            } catch (UnknownHostException e) {
+                address = "localhost";
+            }
+            String url = URIUtil.newURI("http", address, config.getInteger(Keys.WEB_PORT), "", "");
+            properties.setProperty("web.url", url);
         }
-
-        String url = config.getString(
-                Keys.WEB_URL, URIUtil.newURI("http", address, config.getInteger(Keys.WEB_PORT), "", ""));
-        properties.setProperty("web.url", url);
 
         VelocityEngine velocityEngine = new VelocityEngine();
         velocityEngine.init(properties);

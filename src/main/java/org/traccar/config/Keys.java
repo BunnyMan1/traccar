@@ -310,19 +310,21 @@ public final class Keys {
             0.0);
 
     /**
+     * Fuel increase threshold value. When fuel level increases from one position to another for more the value, an
+     * event is generated.
+     */
+    public static final ConfigKey<Double> EVENT_FUEL_INCREASE_THRESHOLD = new DoubleConfigKey(
+            "fuelIncreaseThreshold",
+            List.of(KeyType.SERVER, KeyType.DEVICE),
+            0.0);
+
+    /**
      * Speed limit value in knots.
      */
     public static final ConfigKey<Double> EVENT_OVERSPEED_LIMIT = new DoubleConfigKey(
             "speedLimit",
             List.of(KeyType.SERVER, KeyType.DEVICE),
             0.0);
-
-    /**
-     * If true, the event is generated once at the beginning of overspeeding period.
-     */
-    public static final ConfigKey<Boolean> EVENT_OVERSPEED_NOT_REPEAT = new BooleanConfigKey(
-            "event.overspeed.notRepeat",
-            List.of(KeyType.CONFIG));
 
     /**
      * Minimal over speed duration to trigger the event. Value in seconds.
@@ -590,13 +592,6 @@ public final class Keys {
             600L);
 
     /**
-     * Force additional state check when device status changes to 'offline' or 'unknown'. Default false.
-     */
-    public static final ConfigKey<Boolean> STATUS_UPDATE_DEVICE_STATE = new BooleanConfigKey(
-            "status.updateDeviceState",
-            List.of(KeyType.CONFIG));
-
-    /**
      * List of protocol names to ignore offline status. Can be useful to not trigger status change when devices are
      * configured to disconnect after reporting a batch of data.
      */
@@ -785,20 +780,19 @@ public final class Keys {
             List.of(KeyType.CONFIG));
 
     /**
-     * Enable commands queuing when devices are offline. Commands are buffered in memory only, so restarting service
-     * will clear the buffer.
-     */
-    public static final ConfigKey<Boolean> COMMANDS_QUEUEING = new BooleanConfigKey(
-            "commands.queueing",
-            List.of(KeyType.CONFIG));
-
-    /**
      * Root folder for all template files.
      */
     public static final ConfigKey<String> TEMPLATES_ROOT = new StringConfigKey(
             "templates.root",
             List.of(KeyType.CONFIG),
             "templates");
+
+    /**
+     * Log emails instead of sending them via SMTP. Intended for testing purposes only.
+     */
+    public static final ConfigKey<Boolean> MAIL_DEBUG = new BooleanConfigKey(
+            "mail.debug",
+            List.of(KeyType.CONFIG));
 
     /**
      * Force SMTP settings from the config file and ignore user attributes.
@@ -1152,7 +1146,6 @@ public final class Keys {
      * Filter records by Maximum Speed value in knots. Can be used to filter jumps to far locations even if Position
      * appears valid or if Position `speed` field reported by the device is also within limits. Calculates speed from
      * the distance to the previous position and the elapsed time.
-     *
      * Tip: Shouldn't be too low. Start testing with values at about 25000.
      */
     public static final ConfigKey<Integer> FILTER_MAX_SPEED = new IntegerConfigKey(
@@ -1169,7 +1162,6 @@ public final class Keys {
     /**
      * If false, the server expects all locations to come sequentially (for each device). Filter checks for duplicates,
      * distance, speed, or time period only against the location that was last received by server.
-     *
      * If true, the server expects locations to come at random order (since tracking device might go offline).
      * Filter checks for duplicates, distance, speed, or time period against the preceding Position's.
      * Important: setting to true can cause potential performance issues.
@@ -1213,7 +1205,6 @@ public final class Keys {
     /**
      * List of protocols to enable. If not specified, Traccar enabled all protocols that have port numbers listed.
      * The value is a comma-separated list of protocol names.
-     *
      * Example value: teltonika,osmand
      */
     public static final ConfigKey<String> PROTOCOLS_ENABLE = new StringConfigKey(
@@ -1506,7 +1497,6 @@ public final class Keys {
 
     /**
      * Public URL for the web app. Used for notification and report link.
-     *
      * If not provided, Traccar will attempt to get a URL from the server IP address, but it might be a local address.
      */
     public static final ConfigKey<String> WEB_URL = new StringConfigKey(

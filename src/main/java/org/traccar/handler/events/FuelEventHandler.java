@@ -25,16 +25,17 @@ import org.traccar.model.Position;
 import org.traccar.session.cache.CacheManager;
 
 import javax.inject.Inject;
-import java.util.Collections;
+import javax.inject.Singleton;
 import java.util.Map;
 
+@Singleton
 @ChannelHandler.Sharable
-public class FuelDropEventHandler extends BaseEventHandler {
+public class FuelEventHandler extends BaseEventHandler {
 
     private final CacheManager cacheManager;
 
     @Inject
-    public FuelDropEventHandler(CacheManager cacheManager) {
+    public FuelEventHandler(CacheManager cacheManager) {
         this.cacheManager = cacheManager;
     }
 
@@ -49,18 +50,25 @@ public class FuelDropEventHandler extends BaseEventHandler {
             return null;
         }
 
-        double fuelDropThreshold = AttributeUtil.lookup(
-                cacheManager, Keys.EVENT_FUEL_DROP_THRESHOLD, position.getDeviceId());
-        if (fuelDropThreshold > 0) {
+        if (position.hasAttribute(Position.KEY_FUEL_LEVEL)) {
             Position lastPosition = cacheManager.getPosition(position.getDeviceId());
-            if (position.hasAttribute(Position.KEY_FUEL_LEVEL)
-                    && lastPosition != null && lastPosition.hasAttribute(Position.KEY_FUEL_LEVEL)) {
+            if (lastPosition != null && lastPosition.hasAttribute(Position.KEY_FUEL_LEVEL)) {
+                double before = lastPosition.getDouble(Position.KEY_FUEL_LEVEL);
+                double after = position.getDouble(Position.KEY_FUEL_LEVEL);
+                double change = after - before;
 
-                double drop = lastPosition.getDouble(Position.KEY_FUEL_LEVEL)
-                        - position.getDouble(Position.KEY_FUEL_LEVEL);
-                if (drop >= fuelDropThreshold) {
-                    Event event = new Event(Event.TYPE_DEVICE_FUEL_DROP, position);
-                    return Collections.singletonMap(event, position);
+                if (change > 0) {
+                    double threshold = AttributeUtil.lookup(
+                            cacheManager, Keys.EVENT_FUEL_INCREASE_THRESHOLD, position.getDeviceId());
+                    if (change >= threshold) {
+                        return Map.of(new Event(Event.TYPE_DEVICE_FUEL_INCREASE, position), position);
+                    }
+                } else if (change < 0) {
+                    double threshold = AttributeUtil.lookup(
+                            cacheManager, Keys.EVENT_FUEL_DROP_THRESHOLD, position.getDeviceId());
+                    if (Math.abs(change) >= threshold) {
+                        return Map.of(new Event(Event.TYPE_DEVICE_FUEL_DROP, position), position);
+                    }
                 }
             }
         }

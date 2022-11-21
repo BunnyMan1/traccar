@@ -20,13 +20,16 @@ import org.traccar.broadcast.BroadcastService;
 import org.traccar.config.Config;
 import org.traccar.model.Attribute;
 import org.traccar.model.BaseModel;
+import org.traccar.model.Calendar;
 import org.traccar.model.Device;
 import org.traccar.model.Driver;
 import org.traccar.model.Geofence;
+import org.traccar.model.Group;
 import org.traccar.model.GroupedModel;
 import org.traccar.model.Maintenance;
 import org.traccar.model.Notification;
 import org.traccar.model.Position;
+import org.traccar.model.ScheduledModel;
 import org.traccar.model.Server;
 import org.traccar.model.User;
 import org.traccar.storage.Storage;
@@ -41,6 +44,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -52,6 +56,7 @@ import java.util.stream.Collectors;
 @Singleton
 public class CacheManager implements BroadcastInterface {
 
+    private static final int GROUP_DEPTH_LIMIT = 3;
     private static final Collection<Class<? extends BaseModel>> CLASSES = Arrays.asList(
             Attribute.class, Driver.class, Geofence.class, Maintenance.class, Notification.class);
 
@@ -63,7 +68,7 @@ public class CacheManager implements BroadcastInterface {
 
     private final Map<CacheKey, CacheValue> deviceCache = new HashMap<>();
     private final Map<Long, Integer> deviceReferences = new HashMap<>();
-    private final Map<Long, Map<Class<? extends BaseModel>, List<Long>>> deviceLinks = new HashMap<>();
+    private final Map<Long, Map<Class<? extends BaseModel>, Set<Long>>> deviceLinks = new HashMap<>();
     private final Map<Long, Position> devicePositions = new HashMap<>();
 
     private Server server;
@@ -127,7 +132,7 @@ public class CacheManager implements BroadcastInterface {
             lock.readLock().lock();
             var users = deviceLinks.get(deviceId).get(User.class).stream()
                     .collect(Collectors.toUnmodifiableSet());
-            return notificationUsers.get(notificationId).stream()
+            return notificationUsers.getOrDefault(notificationId, new LinkedList<>()).stream()
                     .filter(user -> users.contains(user.getId()))
                     .collect(Collectors.toUnmodifiableList());
         } finally {
@@ -215,6 +220,10 @@ public class CacheManager implements BroadcastInterface {
             if (((GroupedModel) before).getGroupId() != ((GroupedModel) object).getGroupId()) {
                 invalidate = true;
             }
+        } else if (object instanceof ScheduledModel) {
+            if (((ScheduledModel) before).getCalendarId() != ((ScheduledModel) object).getCalendarId()) {
+                invalidate = true;
+            }
         }
         if (invalidate) {
             invalidate(object.getClass(), object.getId());
@@ -269,33 +278,65 @@ public class CacheManager implements BroadcastInterface {
     }
 
     private void unsafeAddDevice(long deviceId) throws StorageException {
-        Map<Class<? extends BaseModel>, List<Long>> links = new HashMap<>();
+        Map<Class<? extends BaseModel>, Set<Long>> links = new HashMap<>();
 
         Device device = storage.getObject(Device.class, new Request(
                 new Columns.All(), new Condition.Equals("id", "id", deviceId)));
         if (device != null) {
             addObject(deviceId, device);
 
+            int groupDepth = 0;
+            long groupId = device.getGroupId();
+            while (groupDepth < GROUP_DEPTH_LIMIT && groupId > 0) {
+                Group group = storage.getObject(Group.class, new Request(
+                        new Columns.All(), new Condition.Equals("id", "id", groupId)));
+                links.computeIfAbsent(Group.class, k -> new LinkedHashSet<>()).add(group.getId());
+                addObject(deviceId, group);
+                groupId = group.getGroupId();
+                groupDepth += 1;
+            }
+
             for (Class<? extends BaseModel> clazz : CLASSES) {
                 var objects = storage.getObjects(clazz, new Request(
                         new Columns.All(), new Condition.Permission(Device.class, deviceId, clazz)));
-                links.put(clazz, objects.stream().map(BaseModel::getId).collect(Collectors.toList()));
-                objects.forEach(object -> addObject(deviceId, object));
+                links.put(clazz, objects.stream().map(BaseModel::getId).collect(Collectors.toSet()));
+                for (var object : objects) {
+                    addObject(deviceId, object);
+                    if (object instanceof ScheduledModel) {
+                        var scheduled = (ScheduledModel) object;
+                        if (scheduled.getCalendarId() > 0) {
+                            var calendar = storage.getObject(Calendar.class, new Request(
+                                    new Columns.All(), new Condition.Equals("id", "id", scheduled.getCalendarId())));
+                            links.computeIfAbsent(Notification.class, k -> new LinkedHashSet<>())
+                                    .add(calendar.getId());
+                            addObject(deviceId, calendar);
+                        }
+                    }
+                }
             }
 
             var users = storage.getObjects(User.class, new Request(
                     new Columns.All(), new Condition.Permission(User.class, Device.class, deviceId)));
-            links.put(User.class, users.stream().map(BaseModel::getId).collect(Collectors.toList()));
+            links.put(User.class, users.stream().map(BaseModel::getId).collect(Collectors.toSet()));
             for (var user : users) {
                 addObject(deviceId, user);
                 var notifications = storage.getObjects(Notification.class, new Request(
-                        new Columns.All(), new Condition.Permission(User.class, user.getId(), Notification.class)));
-                notifications.stream()
+                        new Columns.All(),
+                        new Condition.Permission(User.class, user.getId(), Notification.class))).stream()
                         .filter(Notification::getAlways)
-                        .forEach(object -> {
-                            links.computeIfAbsent(Notification.class, k -> new LinkedList<>()).add(object.getId());
-                            addObject(deviceId, object);
-                        });
+                        .collect(Collectors.toList());
+                for (var notification : notifications) {
+                    links.computeIfAbsent(Notification.class, k -> new LinkedHashSet<>())
+                            .add(notification.getId());
+                    addObject(deviceId, notification);
+                    if (notification.getCalendarId() > 0) {
+                        var calendar = storage.getObject(Calendar.class, new Request(
+                                new Columns.All(), new Condition.Equals("id", "id", notification.getCalendarId())));
+                        links.computeIfAbsent(Notification.class, k -> new LinkedHashSet<>())
+                                .add(calendar.getId());
+                        addObject(deviceId, calendar);
+                    }
+                }
             }
 
             deviceLinks.put(deviceId, links);

@@ -15,7 +15,6 @@
  */
 package org.traccar.session;
 
-import com.google.inject.Injector;
 import io.netty.channel.Channel;
 import io.netty.util.Timeout;
 import io.netty.util.Timer;
@@ -28,9 +27,6 @@ import org.traccar.config.Config;
 import org.traccar.config.Keys;
 import org.traccar.database.DeviceLookupService;
 import org.traccar.database.NotificationManager;
-import org.traccar.handler.events.MotionEventHandler;
-import org.traccar.handler.events.OverspeedEventHandler;
-import org.traccar.helper.model.AttributeUtil;
 import org.traccar.model.BaseModel;
 import org.traccar.model.Device;
 import org.traccar.model.Event;
@@ -66,14 +62,10 @@ public class ConnectionManager implements BroadcastInterface {
     private static final Logger LOGGER = LoggerFactory.getLogger(ConnectionManager.class);
 
     private final long deviceTimeout;
-    private final boolean updateDeviceState;
 
     private final Map<Long, DeviceSession> sessionsByDeviceId = new ConcurrentHashMap<>();
     private final Map<Endpoint, Map<String, DeviceSession>> sessionsByEndpoint = new ConcurrentHashMap<>();
 
-    private final Map<Long, DeviceState> deviceStates = new ConcurrentHashMap<>();
-
-    private final Injector injector;
     private final Config config;
     private final CacheManager cacheManager;
     private final Storage storage;
@@ -90,10 +82,9 @@ public class ConnectionManager implements BroadcastInterface {
 
     @Inject
     public ConnectionManager(
-            Injector injector, Config config, CacheManager cacheManager, Storage storage,
+            Config config, CacheManager cacheManager, Storage storage,
             NotificationManager notificationManager, Timer timer, BroadcastService broadcastService,
             DeviceLookupService deviceLookupService) {
-        this.injector = injector;
         this.config = config;
         this.cacheManager = cacheManager;
         this.storage = storage;
@@ -102,7 +93,6 @@ public class ConnectionManager implements BroadcastInterface {
         this.broadcastService = broadcastService;
         this.deviceLookupService = deviceLookupService;
         deviceTimeout = config.getLong(Keys.STATUS_TIMEOUT);
-        updateDeviceState = config.getBoolean(Keys.STATUS_UPDATE_DEVICE_STATE);
         broadcastService.registerListener(this);
     }
 
@@ -136,7 +126,9 @@ public class ConnectionManager implements BroadcastInterface {
             device = addUnknownDevice(uniqueIds[0]);
         }
 
-        if (device != null && !device.getDisabled()) {
+        if (device != null) {
+            device.checkDisabled();
+
             DeviceSession oldSession = sessionsByDeviceId.remove(device.getId());
             if (oldSession != null) {
                 Endpoint oldEndpoint = new Endpoint(oldSession.getChannel(), oldSession.getRemoteAddress());
@@ -160,7 +152,7 @@ public class ConnectionManager implements BroadcastInterface {
 
             return deviceSession;
         } else {
-            LOGGER.warn((device == null ? "Unknown" : "Disabled") + " device - " + String.join(" ", uniqueIds)
+            LOGGER.warn("Unknown device - " + String.join(" ", uniqueIds)
                     + " (" + ((InetSocketAddress) remoteAddress).getHostString() + ")");
             return null;
         }
@@ -187,12 +179,14 @@ public class ConnectionManager implements BroadcastInterface {
         }
     }
 
-    public void deviceDisconnected(Channel channel) {
+    public void deviceDisconnected(Channel channel, boolean supportsOffline) {
         Endpoint endpoint = new Endpoint(channel, channel.remoteAddress());
         Map<String, DeviceSession> endpointSessions = sessionsByEndpoint.remove(endpoint);
         if (endpointSessions != null) {
             for (DeviceSession deviceSession : endpointSessions.values()) {
-                updateDevice(deviceSession.getDeviceId(), Device.STATUS_OFFLINE, null);
+                if (supportsOffline) {
+                    updateDevice(deviceSession.getDeviceId(), Device.STATUS_OFFLINE, null);
+                }
                 sessionsByDeviceId.remove(deviceSession.getDeviceId());
                 cacheManager.removeDevice(deviceSession.getDeviceId());
             }
@@ -242,15 +236,9 @@ public class ConnectionManager implements BroadcastInterface {
                     break;
                 case Device.STATUS_UNKNOWN:
                     eventType = Event.TYPE_DEVICE_UNKNOWN;
-                    if (updateDeviceState) {
-                        events.putAll(updateDeviceState(deviceId));
-                    }
                     break;
                 default:
                     eventType = Event.TYPE_DEVICE_OFFLINE;
-                    if (updateDeviceState) {
-                        events.putAll(updateDeviceState(deviceId));
-                    }
                     break;
             }
             events.put(new Event(eventType, deviceId), null);
@@ -283,32 +271,6 @@ public class ConnectionManager implements BroadcastInterface {
         }
 
         updateDevice(true, device);
-    }
-
-    public DeviceState getDeviceState(long deviceId) {
-        return deviceStates.computeIfAbsent(deviceId, x -> new DeviceState());
-    }
-
-    public void setDeviceState(long deviceId, DeviceState deviceState) {
-        deviceStates.put(deviceId, deviceState);
-    }
-
-    public Map<Event, Position> updateDeviceState(long deviceId) {
-        DeviceState deviceState = getDeviceState(deviceId);
-        Map<Event, Position> result = new HashMap<>();
-
-        Map<Event, Position> event = injector.getInstance(MotionEventHandler.class).updateMotionState(deviceState);
-        if (event != null) {
-            result.putAll(event);
-        }
-
-        double speedLimit = AttributeUtil.lookup(cacheManager, Keys.EVENT_OVERSPEED_LIMIT, deviceId);
-        event = injector.getInstance(OverspeedEventHandler.class).updateOverspeedState(deviceState, speedLimit);
-        if (event != null) {
-            result.putAll(event);
-        }
-
-        return result;
     }
 
     public synchronized void sendKeepalive() {

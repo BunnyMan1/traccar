@@ -24,9 +24,11 @@ import org.traccar.model.User;
 import org.traccar.notification.NotificationFormatter;
 
 import javax.inject.Inject;
+import javax.inject.Singleton;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.Entity;
 
+@Singleton
 public class NotificatorTraccar implements Notificator {
 
     private final NotificationFormatter notificationFormatter;
@@ -55,7 +57,7 @@ public class NotificatorTraccar implements Notificator {
     public NotificatorTraccar(Config config, NotificationFormatter notificationFormatter, Client client) {
         this.notificationFormatter = notificationFormatter;
         this.client = client;
-        this.url = "http://localhost:3001/push/";
+        this.url = "https://www.traccar.org/push/";
         this.key = config.getString(Keys.NOTIFICATOR_TRACCAR_KEY);
     }
 

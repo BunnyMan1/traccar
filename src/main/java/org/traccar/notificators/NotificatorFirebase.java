@@ -21,6 +21,8 @@ import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
 import com.google.firebase.messaging.AndroidConfig;
 import com.google.firebase.messaging.AndroidNotification;
+import com.google.firebase.messaging.ApnsConfig;
+import com.google.firebase.messaging.Aps;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.MulticastMessage;
@@ -79,11 +81,22 @@ public class NotificatorFirebase implements Notificator {
                                     .setSound("default")
                                     .build())
                             .build())
+                    .setApnsConfig(ApnsConfig.builder()
+                            .setAps(Aps.builder()
+                                    .setSound("default")
+                                    .build())
+                            .build())
                     .addAllTokens(registrationTokens)
+                    .putData("eventId", String.valueOf(event.getId()))
                     .build();
 
             try {
-                FirebaseMessaging.getInstance().sendMulticast(message);
+                var result = FirebaseMessaging.getInstance().sendMulticast(message);
+                for (var response : result.getResponses()) {
+                    if (!response.isSuccessful()) {
+                        throw new MessageException(response.getException());
+                    }
+                }
             } catch (FirebaseMessagingException e) {
                 throw new MessageException(e);
             }
