@@ -15,6 +15,7 @@
  */
 package org.traccar.model;
 
+import org.traccar.storage.QueryIgnore;
 import org.traccar.storage.StorageName;
 
 import java.util.Date;
@@ -79,10 +80,12 @@ public class Event extends Message {
 
     private String deviceName;
 
+    @QueryIgnore
     public String getDeviceName() {
         return deviceName;
     }
 
+    @QueryIgnore
     public void setDeviceName(String deviceName) {
         this.deviceName = deviceName;
     }
