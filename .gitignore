@@ -11,3 +11,5 @@ nbactions.xml
 out
 build
 bin/
+
+temp_upload/
