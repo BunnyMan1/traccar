@@ -24,6 +24,7 @@ import org.traccar.model.Event;
 import org.traccar.model.Geofence;
 import org.traccar.model.Group;
 import org.traccar.model.Maintenance;
+import org.traccar.model.Position;
 import org.traccar.reports.common.ReportUtils;
 import org.traccar.reports.model.DeviceReportSection;
 import org.traccar.storage.Storage;
@@ -64,7 +65,7 @@ public class EventsReportProvider {
         return storage.getObjects(Event.class, new Request(
                 new Columns.All(),
                 new Condition.And(
-                        new Condition.Equals("deviceId", "deviceId", deviceId),
+                        new Condition.Equals("deviceId", deviceId),
                         new Condition.Between("eventTime", "from", from, "to", to)),
                 new Order("eventTime")));
     }
@@ -102,6 +103,7 @@ public class EventsReportProvider {
         ArrayList<String> sheetNames = new ArrayList<>();
         HashMap<Long, String> geofenceNames = new HashMap<>();
         HashMap<Long, String> maintenanceNames = new HashMap<>();
+        HashMap<Long, Position> positions = new HashMap<>();
 
         // Have only 1 sheet for all devices data
         sheetNames.add(WorkbookUtil.createSafeSheetName("Sheet1"));
@@ -137,12 +139,20 @@ public class EventsReportProvider {
                 }
             }
 
-            // DeviceReportSection<Event> deviceEvents = new DeviceReportSection<Event>();
+            for (Event event : events) {
+                long positionId = event.getPositionId();
+                if (positionId > 0) {
+                    Position position = storage.getObject(Position.class, new Request(
+                            new Columns.All(), new Condition.Equals("id", positionId)));
+                    positions.put(positionId, position);
+                }
+            }
+            // DeviceReportSection deviceEvents = new DeviceReportSection();
             // deviceEvents.setDeviceName(device.getName());
             // sheetNames.add(WorkbookUtil.createSafeSheetName(deviceEvents.getDeviceName()));
             // if (device.getGroupId() > 0) {
             // Group group = storage.getObject(Group.class, new Request(
-            // new Columns.All(), new Condition.Equals("id", "id", device.getGroupId())));
+            // new Columns.All(), new Condition.Equals("id", device.getGroupId())));
             // if (group != null) {
             // deviceEvents.setGroupName(group.getName());
             // }
@@ -162,6 +172,7 @@ public class EventsReportProvider {
             context.putVar("sheetNames", sheetNames);
             context.putVar("geofenceNames", geofenceNames);
             context.putVar("maintenanceNames", maintenanceNames);
+            context.putVar("positions", positions);
             context.putVar("from", from);
             context.putVar("to", to);
             reportUtils.processTemplateWithSheets(inputStream, outputStream, context);

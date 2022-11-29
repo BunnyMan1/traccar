@@ -30,7 +30,6 @@ import org.traccar.storage.Storage;
 import org.traccar.storage.StorageException;
 import org.traccar.storage.query.Columns;
 import org.traccar.storage.query.Condition;
-import org.traccar.storage.query.Limit;
 import org.traccar.storage.query.Order;
 import org.traccar.storage.query.Request;
 
@@ -88,10 +87,9 @@ public class FilterHandler extends BaseDataHandler {
         return storage.getObject(Position.class, new Request(
                 new Columns.All(),
                 new Condition.And(
-                        new Condition.Equals("deviceId", "deviceId", deviceId),
+                        new Condition.Equals("deviceId", deviceId),
                         new Condition.Compare("fixTime", "<=", "time", date)),
-                new Order(true, "fixTime"),
-                new Limit(1)));
+                new Order("fixTime", true, 1)));
     }
 
     private boolean filterInvalid(Position position) {

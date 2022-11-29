@@ -51,6 +51,7 @@ public class HuabaoProtocolDecoder extends BaseProtocolDecoder {
     public static final int MSG_GENERAL_RESPONSE = 0x8001;
     public static final int MSG_GENERAL_RESPONSE_2 = 0x4401;
     public static final int MSG_HEARTBEAT = 0x0002;
+    public static final int MSG_HEARTBEAT_2 = 0x0506;
     public static final int MSG_TERMINAL_REGISTER = 0x0100;
     public static final int MSG_TERMINAL_REGISTER_RESPONSE = 0x8100;
     public static final int MSG_TERMINAL_CONTROL = 0x8105;
@@ -160,6 +161,17 @@ public class HuabaoProtocolDecoder extends BaseProtocolDecoder {
         return dateBuilder.getDate();
     }
 
+    private String decodeId(ByteBuf id) {
+        String serial = ByteBufUtil.hexDump(id);
+        if (serial.matches("[0-9]+")) {
+            return serial;
+        } else {
+            long imei = id.getUnsignedShort(0);
+            imei = (imei << 32) + id.getUnsignedInt(2);
+            return String.valueOf(imei);
+        }
+    }
+
     @Override
     protected Object decode(
             Channel channel, SocketAddress remoteAddress, Object msg) throws Exception {
@@ -193,7 +205,7 @@ public class HuabaoProtocolDecoder extends BaseProtocolDecoder {
             index = buf.readUnsignedShort();
         }
 
-        DeviceSession deviceSession = getDeviceSession(channel, remoteAddress, ByteBufUtil.hexDump(id));
+        DeviceSession deviceSession = getDeviceSession(channel, remoteAddress, decodeId(id));
         if (deviceSession == null) {
             return null;
         }
@@ -208,12 +220,12 @@ public class HuabaoProtocolDecoder extends BaseProtocolDecoder {
                 ByteBuf response = Unpooled.buffer();
                 response.writeShort(index);
                 response.writeByte(RESULT_SUCCESS);
-                response.writeBytes(ByteBufUtil.hexDump(id).getBytes(StandardCharsets.US_ASCII));
+                response.writeBytes(decodeId(id).getBytes(StandardCharsets.US_ASCII));
                 channel.writeAndFlush(new NetworkMessage(
                         formatMessage(MSG_TERMINAL_REGISTER_RESPONSE, id, false, response), remoteAddress));
             }
 
-        } else if (type == MSG_TERMINAL_AUTH || type == MSG_HEARTBEAT || type == MSG_PHOTO) {
+        } else if (type == MSG_TERMINAL_AUTH || type == MSG_HEARTBEAT || type == MSG_HEARTBEAT_2 || type == MSG_PHOTO) {
 
             sendGeneralResponse(channel, remoteAddress, id, type, index);
 
@@ -396,6 +408,13 @@ public class HuabaoProtocolDecoder extends BaseProtocolDecoder {
         }
     }
 
+    private double decodeCustomDouble(ByteBuf buf) {
+        int b1 = buf.readByte();
+        int b2 = buf.readUnsignedByte();
+        int sign = b1 != 0 ? b1 / Math.abs(b1) : 1;
+        return sign * (Math.abs(b1) + b2 / 255.0);
+    }
+
     private Position decodeLocation(DeviceSession deviceSession, ByteBuf buf) {
 
         Position position = new Position(getProtocolName());
@@ -517,12 +536,8 @@ public class HuabaoProtocolDecoder extends BaseProtocolDecoder {
                     while (buf.readerIndex() < endIndex) {
                         int sensorIndex = buf.readUnsignedByte();
                         buf.skipBytes(6); // mac
-                        position.set(
-                                Position.PREFIX_TEMP + sensorIndex,
-                                buf.readUnsignedByte() + buf.readUnsignedByte() * 0.01);
-                        position.set(
-                                "humidity" + sensorIndex,
-                                buf.readUnsignedByte() + buf.readUnsignedByte() * 0.01);
+                        position.set(Position.PREFIX_TEMP + sensorIndex, decodeCustomDouble(buf));
+                        position.set("humidity" + sensorIndex, decodeCustomDouble(buf));
                     }
                     break;
                 case 0xEB:

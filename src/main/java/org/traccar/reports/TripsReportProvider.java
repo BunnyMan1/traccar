@@ -88,12 +88,12 @@ public class TripsReportProvider {
 
         for (Device device : reportUtils.getAccessibleDevices(userId, deviceIds, groupIds)) {
             Collection<TripReportItem> trips = detectTrips(device, from, to);
-            // DeviceReportSection<TripReportItem> deviceTrips = new DeviceReportSection<TripReportItem>();
+            // DeviceReportSection deviceTrips = new DeviceReportSection();
             // deviceTrips.setDeviceName(device.getName());
             // sheetNames.add(WorkbookUtil.createSafeSheetName(deviceTrips.getDeviceName()));
             // if (device.getGroupId() > 0) {
             //     Group group = storage.getObject(Group.class, new Request(
-            //             new Columns.All(), new Condition.Equals("id", "id", device.getGroupId())));
+            //             new Columns.All(), new Condition.Equals("id", device.getGroupId())));
             //     if (group != null) {
             //         deviceTrips.setGroupName(group.getName());
             //     }

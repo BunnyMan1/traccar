@@ -27,6 +27,7 @@ import org.traccar.model.Command;
 import org.traccar.model.Device;
 import org.traccar.model.Position;
 import org.traccar.model.Typed;
+import org.traccar.model.User;
 import org.traccar.model.UserRestrictions;
 import org.traccar.storage.StorageException;
 import org.traccar.storage.query.Columns;
@@ -82,7 +83,15 @@ public class CommandResource extends ExtendedObjectResource<Command> {
     public Collection<Command> get(@QueryParam("deviceId") long deviceId) throws StorageException {
         permissionsService.checkPermission(Device.class, getUserId(), deviceId);
         BaseProtocol protocol = getDeviceProtocol(deviceId);
-        return get(false, 0, 0, deviceId).stream().filter(command -> {
+
+        var commands = storage.getObjects(baseClass, new Request(
+                new Columns.All(),
+                Condition.merge(List.of(
+                        new Condition.Permission(User.class, getUserId(), baseClass),
+                        new Condition.Permission(Device.class, deviceId, baseClass)
+                ))));
+
+        return commands.stream().filter(command -> {
             String type = command.getType();
             if (protocol != null) {
                 return command.getTextChannel() && protocol.getSupportedTextCommands().contains(type)
@@ -98,10 +107,10 @@ public class CommandResource extends ExtendedObjectResource<Command> {
     public Response send(Command entity) throws Exception {
         permissionsService.checkRestriction(getUserId(), UserRestrictions::getReadonly);
         if (entity.getId() > 0) {
-            permissionsService.checkPermission(Command.class, getUserId(), entity.getId());
+            permissionsService.checkPermission(baseClass, getUserId(), entity.getId());
             long deviceId = entity.getDeviceId();
             entity = storage.getObject(baseClass, new Request(
-                    new Columns.All(), new Condition.Equals("id", "id", entity.getId())));
+                    new Columns.All(), new Condition.Equals("id", entity.getId())));
             entity.setDeviceId(deviceId);
         } else {
             permissionsService.checkRestriction(getUserId(), UserRestrictions::getLimitCommands);
