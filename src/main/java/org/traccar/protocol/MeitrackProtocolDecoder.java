@@ -524,12 +524,30 @@ public class MeitrackProtocolDecoder extends BaseProtocolDecoder {
 
             paramCount = buf.readUnsignedByte();
             for (int j = 0; j < paramCount; j++) {
-                if (buf.getUnsignedByte(buf.readerIndex()) == 0xFE) {
-                    buf.readUnsignedShort(); // extension id
-                } else {
-                    buf.readUnsignedByte(); // id
+                boolean extension = buf.getUnsignedByte(buf.readerIndex()) == 0xFE;
+                int id = extension ? buf.readUnsignedShort() : buf.readUnsignedByte();
+                int length = buf.readUnsignedByte();
+                switch (id) {
+                    case 0x2A:
+                    case 0x2B:
+                    case 0x2C:
+                    case 0x2D:
+                    case 0x2E:
+                    case 0x2F:
+                    case 0x30:
+                    case 0x31:
+                        buf.readUnsignedByte(); // label
+                        position.set(Position.PREFIX_TEMP + (id - 0x2A), buf.readShortLE() * 0.01);
+                        break;
+                    case 0xFE31:
+                        buf.readUnsignedByte(); // alarm protocol
+                        buf.readUnsignedByte(); // alarm type
+                        buf.skipBytes(length - 2);
+                        break;
+                    default:
+                        buf.skipBytes(length);
+                        break;
                 }
-                buf.skipBytes(buf.readUnsignedByte()); // value
             }
 
             positions.add(position);
