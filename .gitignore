@@ -13,3 +13,6 @@ build
 bin/
 
 temp_upload/
+
+setup/OpenJDK*
+setup/traccar-linux*
