@@ -1,5 +1,4 @@
 Compile Server:
-- gradle
 - ./gradlew assemble
 
 Compile Web Modern:
@@ -7,25 +6,30 @@ Compile Web Modern:
 - npm i
 - npm run build
 
-Deploy:
-- Server: Upload target/lib and target/tracker-server.jar to the server at /opt/traccar
-- Web modern: Upload /traccar-web/modern/build folder to the server at /opt/traccar/web/modern
-- Steps:
-    - Compare all files using tree with new source installation.
-    - Stay at /home/bunny
-    - sudo su
-    - cp -r /opt/traccar/lib backup/lib_v_5_2/
-    - cp -r /opt/traccar/tracker-server.jar backup/tracker-server_v_5_2.jar
-    - service traccar stop
-    - rm -rf /opt/traccar/lib && mv build/lib /opt/traccar/
-    - mv build/tracker-server.jar /opt/traccar/
-    - mv build/build /opt/taccar/modern
-    (Check if conf/default.xml needs to be updated from new source installation)
-    - service traccar start
+Deploy Steps:
+- Build Server
+- Build Modern Web App
+- cd setup/
+- sh package.sh <traccar_version> linux-64
+- On both Prod servers:
+    - rm /home/bunny/build/*
+- Transfer build to server:
+    - rsync -a --progress traccar-linux-64-5.6.zip nconnect_gps:/home/bunny/build/ 
+    - Repeat above step for nspira_gps too.
+- ssh into each server:
+    - mkdir ./backup/<date>/
+    - cp /opt/traccar/conf/traccar.xml ./backup/<date>/
+    - sudo service traccar stop
+    - cd build/
+    - unzip traccar-linux-*.zip
+    - sudo ./traccar.run
+    - Check if all okay - /opt/traccar/conf/traccar.xml
+    - ls -lt
+    - sudo service traccar start
+- Check respective URLs, Login + Check console.
 
 Transfer code command example:
-- rsync -a --progress temp_upload/ nspira_gps:/home/bunny/build/
-- rsync -a build nspira_gps:/home/bunny/build/
+- rsync -a --progress traccar-linux-64-5.6.zip nconnect_gps:/home/bunny/build/
 
 Check server logs:
 - tail -f /opt/traccar/logs/tracker-server.log
