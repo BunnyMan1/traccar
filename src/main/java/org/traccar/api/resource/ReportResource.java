@@ -87,7 +87,7 @@ public class ReportResource extends SimpleObjectResource<Report> {
     private Response executeReport(long userId, boolean mail, ReportExecutor executor, String reportType,
             Date fromDate, Date toDate) {
         if (mail) {
-            reportMailer.sendAsync(userId, executor);
+            reportMailer.sendAsync(userId, executor, reportType, fromDate, toDate);
             return Response.noContent().build();
         } else {
             StreamingOutput stream = output -> {
