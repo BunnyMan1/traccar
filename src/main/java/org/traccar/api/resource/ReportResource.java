@@ -84,7 +84,8 @@ public class ReportResource extends SimpleObjectResource<Report> {
         super(Report.class);
     }
 
-    private Response executeReport(long userId, boolean mail, ReportExecutor executor) {
+    private Response executeReport(long userId, boolean mail, ReportExecutor executor, String reportType,
+            Date fromDate, Date toDate) {
         if (mail) {
             reportMailer.sendAsync(userId, executor);
             return Response.noContent().build();
@@ -138,7 +139,7 @@ public class ReportResource extends SimpleObjectResource<Report> {
         return executeReport(getUserId(), mail, stream -> {
             LogAction.logReport(getUserId(), "route", from, to, deviceIds, groupIds);
             routeReportProvider.getExcel(stream, getUserId(), deviceIds, groupIds, from, to);
-        });
+        },  "route", from, to);
     }
 
     @Path("route/{type:xlsx|mail}")
@@ -180,7 +181,7 @@ public class ReportResource extends SimpleObjectResource<Report> {
         return executeReport(getUserId(), mail, stream -> {
             LogAction.logReport(getUserId(), "events", from, to, deviceIds, groupIds);
             eventsReportProvider.getExcel(stream, getUserId(), deviceIds, groupIds, types, from, to);
-        });
+        }, "events", from, to);
     }
 
     @Path("events/{type:xlsx|mail}")
@@ -223,8 +224,10 @@ public class ReportResource extends SimpleObjectResource<Report> {
         return executeReport(getUserId(), mail, stream -> {
             LogAction.logReport(getUserId(), "summary", from, to, deviceIds, groupIds);
             summaryReportProvider.getExcel(stream, getUserId(), deviceIds, groupIds, from, to, daily);
-        });
+        }, "summary", from, to);
     }
+
+    // System.out.println();
 
     @Path("summary/{type:xlsx|mail}")
     @GET
@@ -234,7 +237,7 @@ public class ReportResource extends SimpleObjectResource<Report> {
             @QueryParam("groupId") List<Long> groupIds,
             @QueryParam("from") Date from,
             @QueryParam("to") Date to,
-            @QueryParam("daily") boolean daily,
+            @QueryParam("daily") boolean daily, // TODO: send this in email.
             @PathParam("type") String type) throws StorageException {
         return getSummaryExcel(deviceIds, groupIds, from, to, daily, type.equals("mail"));
     }
@@ -264,7 +267,7 @@ public class ReportResource extends SimpleObjectResource<Report> {
         return executeReport(getUserId(), mail, stream -> {
             LogAction.logReport(getUserId(), "trips", from, to, deviceIds, groupIds);
             tripsReportProvider.getExcel(stream, getUserId(), deviceIds, groupIds, from, to);
-        });
+        }, "trips", from, to);
     }
 
     @Path("trips/{type:xlsx|mail}")
@@ -304,7 +307,7 @@ public class ReportResource extends SimpleObjectResource<Report> {
         return executeReport(getUserId(), mail, stream -> {
             LogAction.logReport(getUserId(), "stops", from, to, deviceIds, groupIds);
             stopsReportProvider.getExcel(stream, getUserId(), deviceIds, groupIds, from, to);
-        });
+        }, "stops", from, to);
     }
 
     @Path("stops/{type:xlsx|mail}")

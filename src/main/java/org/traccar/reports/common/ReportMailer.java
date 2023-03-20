@@ -29,6 +29,7 @@ import javax.mail.internet.MimeBodyPart;
 import javax.mail.util.ByteArrayDataSource;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.Date;
 
 public class ReportMailer {
 
@@ -43,19 +44,52 @@ public class ReportMailer {
         this.mailManager = mailManager;
     }
 
-    public void sendAsync(long userId, ReportExecutor executor) {
+    // TODO: and add those to the mail subject and body.
+    public void sendAsync(long userId, ReportExecutor executor, String type, Date from, Date to) {
         new Thread(() -> {
             try {
                 var stream = new ByteArrayOutputStream();
                 executor.execute(stream);
 
                 MimeBodyPart attachment = new MimeBodyPart();
-                attachment.setFileName("report.xlsx");
+
+                attachment.setFileName("report" + "-" + type + ".xlsx");
                 attachment.setDataHandler(new DataHandler(new ByteArrayDataSource(
                         stream.toByteArray(), "application/octet-stream")));
 
                 User user = permissionsService.getUser(userId);
-                mailManager.sendMessage(user, "Report", "The report is in the attachment.", attachment);
+
+                String appendage = "";
+
+                if (type == "trips") {
+                    appendage += " Trips";
+                } else if (type == "route") {
+                    appendage += " Routes";
+                } else if (type == "summary") {
+                    appendage += " Summary";
+                } else if (type == "stops") {
+                    appendage += " Stops";
+                } else if (type == "events") {
+                    appendage += " Events";
+                }
+
+                appendage += "(" + from.toString() + " to " + to.toString() + ")";
+
+                mailManager.sendMessage(user,
+                        // --> Subject of the email:
+                        /*
+                         * Report - <type> (<from> to <to>)
+                         */
+
+                        "Report" + appendage,
+
+                        // --> Body of the email:
+                        /*
+                         * Report - <type> (<from> to <to>)
+                         * 
+                         * The report is in the attachment.
+                         */
+                        "Report" + appendage + "\n\n" + "The report is in the attachment.", attachment);
             } catch (StorageException | IOException | MessagingException e) {
                 LOGGER.warn("Email report failed", e);
             }
@@ -63,3 +97,6 @@ public class ReportMailer {
     }
 
 }
+
+// report-trips.xlsx
+// Report - Trips (From DateTime to DateTime)
