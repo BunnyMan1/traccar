@@ -44,7 +44,6 @@ public class ReportMailer {
         this.mailManager = mailManager;
     }
 
-    // TODO: and add those to the mail subject and body.
     public void sendAsync(long userId, ReportExecutor executor, String type, Date from, Date to) {
         new Thread(() -> {
             try {
@@ -67,6 +66,8 @@ public class ReportMailer {
                     appendage += " Routes";
                 } else if (type == "summary") {
                     appendage += " Summary";
+                } else if (type == "summary-daily") {
+                    appendage += " Summary (Daily)";
                 } else if (type == "stops") {
                     appendage += " Stops";
                 } else if (type == "events") {

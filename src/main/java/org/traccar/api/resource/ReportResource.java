@@ -224,7 +224,7 @@ public class ReportResource extends SimpleObjectResource<Report> {
         return executeReport(getUserId(), mail, stream -> {
             LogAction.logReport(getUserId(), "summary", from, to, deviceIds, groupIds);
             summaryReportProvider.getExcel(stream, getUserId(), deviceIds, groupIds, from, to, daily);
-        }, "summary", from, to);
+        }, "summary" + (daily ? "-daily": ""), from, to);
     }
 
     // System.out.println();
@@ -237,7 +237,7 @@ public class ReportResource extends SimpleObjectResource<Report> {
             @QueryParam("groupId") List<Long> groupIds,
             @QueryParam("from") Date from,
             @QueryParam("to") Date to,
-            @QueryParam("daily") boolean daily, // TODO: send this in email.
+            @QueryParam("daily") boolean daily,
             @PathParam("type") String type) throws StorageException {
         return getSummaryExcel(deviceIds, groupIds, from, to, daily, type.equals("mail"));
     }
