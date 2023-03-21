@@ -16,11 +16,31 @@
  */
 package org.traccar.api.resource;
 
+import java.util.Collection;
+import java.util.Date;
+import java.util.LinkedList;
+import java.util.List;
+
+import javax.inject.Inject;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.StreamingOutput;
+
 import org.traccar.api.SimpleObjectResource;
 import org.traccar.helper.LogAction;
+import org.traccar.model.Device;
 import org.traccar.model.Event;
 import org.traccar.model.Position;
 import org.traccar.model.Report;
+import org.traccar.model.User;
 import org.traccar.model.UserRestrictions;
 import org.traccar.reports.CombinedReportProvider;
 import org.traccar.reports.EventsReportProvider;
@@ -35,22 +55,9 @@ import org.traccar.reports.model.StopReportItem;
 import org.traccar.reports.model.SummaryReportItem;
 import org.traccar.reports.model.TripReportItem;
 import org.traccar.storage.StorageException;
-
-import javax.inject.Inject;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
-import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.HttpHeaders;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.core.StreamingOutput;
-import java.util.Collection;
-import java.util.Date;
-import java.util.List;
+import org.traccar.storage.query.Columns;
+import org.traccar.storage.query.Condition;
+import org.traccar.storage.query.Request;
 
 @Path("reports")
 @Produces(MediaType.APPLICATION_JSON)
@@ -84,10 +91,22 @@ public class ReportResource extends SimpleObjectResource<Report> {
         super(Report.class);
     }
 
+    private List<Device> getDevicesList(List<Long> deviceIds) throws StorageException {
+        List<Device> result = new LinkedList<>();
+        for (Long deviceId : deviceIds) {
+            result.addAll(storage.getObjects(Device.class, new Request(
+                    new Columns.All(),
+                    new Condition.And(
+                            new Condition.Equals("id", deviceId),
+                            new Condition.Permission(User.class, getUserId(), Device.class)))));
+        }
+        return result;
+    }
+
     private Response executeReport(long userId, boolean mail, ReportExecutor executor, String reportType,
-            Date fromDate, Date toDate) {
+            Date fromDate, Date toDate, List<Device> device ) {
         if (mail) {
-            reportMailer.sendAsync(userId, executor, reportType, fromDate, toDate);
+            reportMailer.sendAsync(userId, executor, reportType, fromDate, toDate, device);
             return Response.noContent().build();
         } else {
             StreamingOutput stream = output -> {
@@ -139,7 +158,7 @@ public class ReportResource extends SimpleObjectResource<Report> {
         return executeReport(getUserId(), mail, stream -> {
             LogAction.logReport(getUserId(), "route", from, to, deviceIds, groupIds);
             routeReportProvider.getExcel(stream, getUserId(), deviceIds, groupIds, from, to);
-        },  "route", from, to);
+        }, "route", from, to, getDevicesList(deviceIds));
     }
 
     @Path("route/{type:xlsx|mail}")
@@ -181,7 +200,7 @@ public class ReportResource extends SimpleObjectResource<Report> {
         return executeReport(getUserId(), mail, stream -> {
             LogAction.logReport(getUserId(), "events", from, to, deviceIds, groupIds);
             eventsReportProvider.getExcel(stream, getUserId(), deviceIds, groupIds, types, from, to);
-        }, "events", from, to);
+        }, "events", from, to, getDevicesList(deviceIds));
     }
 
     @Path("events/{type:xlsx|mail}")
@@ -224,7 +243,7 @@ public class ReportResource extends SimpleObjectResource<Report> {
         return executeReport(getUserId(), mail, stream -> {
             LogAction.logReport(getUserId(), "summary", from, to, deviceIds, groupIds);
             summaryReportProvider.getExcel(stream, getUserId(), deviceIds, groupIds, from, to, daily);
-        }, "summary" + (daily ? "-daily": ""), from, to);
+        }, "summary" + (daily ? "-daily" : ""), from, to, getDevicesList(deviceIds));
     }
 
     // System.out.println();
@@ -264,10 +283,11 @@ public class ReportResource extends SimpleObjectResource<Report> {
             @QueryParam("to") Date to,
             @QueryParam("mail") boolean mail) throws StorageException {
         permissionsService.checkRestriction(getUserId(), UserRestrictions::getDisableReports);
+        getDevicesList(deviceIds);
         return executeReport(getUserId(), mail, stream -> {
             LogAction.logReport(getUserId(), "trips", from, to, deviceIds, groupIds);
             tripsReportProvider.getExcel(stream, getUserId(), deviceIds, groupIds, from, to);
-        }, "trips", from, to);
+        }, "trips", from, to, getDevicesList(deviceIds));
     }
 
     @Path("trips/{type:xlsx|mail}")
@@ -307,7 +327,7 @@ public class ReportResource extends SimpleObjectResource<Report> {
         return executeReport(getUserId(), mail, stream -> {
             LogAction.logReport(getUserId(), "stops", from, to, deviceIds, groupIds);
             stopsReportProvider.getExcel(stream, getUserId(), deviceIds, groupIds, from, to);
-        }, "stops", from, to);
+        }, "stops", from, to, getDevicesList(deviceIds));
     }
 
     @Path("stops/{type:xlsx|mail}")

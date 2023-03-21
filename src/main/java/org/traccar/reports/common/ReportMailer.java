@@ -15,21 +15,33 @@
  */
 package org.traccar.reports.common;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.traccar.api.security.PermissionsService;
-import org.traccar.mail.MailManager;
-import org.traccar.model.User;
-import org.traccar.storage.StorageException;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.LinkedList;
+import java.util.List;
 
 import javax.activation.DataHandler;
 import javax.inject.Inject;
 import javax.mail.MessagingException;
 import javax.mail.internet.MimeBodyPart;
 import javax.mail.util.ByteArrayDataSource;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.util.Date;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.SecurityContext;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.traccar.api.security.PermissionsService;
+import org.traccar.api.security.UserPrincipal;
+import org.traccar.mail.MailManager;
+import org.traccar.model.Device;
+import org.traccar.model.User;
+import org.traccar.storage.Storage;
+import org.traccar.storage.StorageException;
+import org.traccar.storage.query.Columns;
+import org.traccar.storage.query.Condition;
+import org.traccar.storage.query.Request;
 
 public class ReportMailer {
 
@@ -44,7 +56,9 @@ public class ReportMailer {
         this.mailManager = mailManager;
     }
 
-    public void sendAsync(long userId, ReportExecutor executor, String type, Date from, Date to) {
+    private SimpleDateFormat formatter = new SimpleDateFormat("dd-MM-yyyy");
+
+    public void sendAsync(long userId, ReportExecutor executor, String type, Date from, Date to, List<Device> devices) {
         new Thread(() -> {
             try {
                 var stream = new ByteArrayOutputStream();
@@ -74,7 +88,16 @@ public class ReportMailer {
                     appendage += " Events";
                 }
 
-                appendage += "(" + from.toString() + " to " + to.toString() + ")";
+                appendage += "(" + formatter.format(from) + " to " + formatter.format(from) + ")";
+
+                String bodyString = "Report" + appendage + "\n\n";
+                if (devices.size() > 0) {
+                    bodyString += "Devices:\n";
+                    for (var device : devices) {
+                        bodyString += device.getName() + "\n";
+                    }
+                }
+                bodyString += "The report is in the attachment.";
 
                 mailManager.sendMessage(user,
                         // --> Subject of the email:
@@ -90,7 +113,7 @@ public class ReportMailer {
                          * 
                          * The report is in the attachment.
                          */
-                        "Report" + appendage + "\n\n" + "The report is in the attachment.", attachment);
+                        bodyString, attachment);
             } catch (StorageException | IOException | MessagingException e) {
                 LOGGER.warn("Email report failed", e);
             }
