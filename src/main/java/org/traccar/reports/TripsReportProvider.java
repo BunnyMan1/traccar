@@ -16,22 +16,6 @@
  */
 package org.traccar.reports;
 
-import org.apache.poi.ss.util.WorkbookUtil;
-import org.traccar.config.Config;
-import org.traccar.config.Keys;
-import org.traccar.helper.model.PositionUtil;
-import org.traccar.model.Device;
-import org.traccar.model.Group;
-import org.traccar.reports.common.ReportUtils;
-import org.traccar.reports.model.DeviceReportSection;
-import org.traccar.reports.model.TripReportItem;
-import org.traccar.storage.Storage;
-import org.traccar.storage.StorageException;
-import org.traccar.storage.query.Columns;
-import org.traccar.storage.query.Condition;
-import org.traccar.storage.query.Request;
-
-import javax.inject.Inject;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -41,6 +25,19 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+
+import javax.inject.Inject;
+
+import org.apache.poi.ss.util.WorkbookUtil;
+import org.traccar.config.Config;
+import org.traccar.config.Keys;
+import org.traccar.helper.model.PositionUtil;
+import org.traccar.model.Device;
+import org.traccar.reports.common.ReportUtils;
+import org.traccar.reports.model.DeviceReportSection;
+import org.traccar.reports.model.TripReportItem;
+import org.traccar.storage.Storage;
+import org.traccar.storage.StorageException;
 
 public class TripsReportProvider {
 

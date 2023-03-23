@@ -15,9 +15,9 @@
  */
 package org.traccar.schedule;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -60,9 +60,6 @@ public class TaskReports implements ScheduleTask {
     private final Storage storage;
     private final Injector injector;
 
-    private List<Device> emptyList = new ArrayList<Device>();
-    private List<Group> emptyList2 = new ArrayList<Group>();
-
     @Inject
     public TaskReports(Storage storage, Injector injector) {
         this.storage = storage;
@@ -102,6 +99,26 @@ public class TaskReports implements ScheduleTask {
         }
     }
 
+    private List<Group> getGroupsList(List<Long> groupIds) throws StorageException {
+        List<Group> result = new LinkedList<>();
+        for (Long groupId : groupIds) {
+            result.addAll(storage.getObjects(Group.class, new Request(
+                    new Columns.All(),
+                    new Condition.Equals("id", groupId))));
+        }
+        return result;
+    }
+
+    private List<Device> getDevicesList(List<Long> deviceIds) throws StorageException {
+        List<Device> result = new LinkedList<>();
+        for (Long deviceId : deviceIds) {
+            result.addAll(storage.getObjects(Device.class, new Request(
+                    new Columns.All(),
+                    new Condition.Equals("id", deviceId))));
+        }
+        return result;
+    }
+
     private void executeReport(Report report, Date from, Date to) throws StorageException {
 
         var deviceIds = storage.getObjects(Device.class, new Request(
@@ -124,31 +141,31 @@ public class TaskReports implements ScheduleTask {
                     var eventsReportProvider = injector.getInstance(EventsReportProvider.class);
                     reportMailer.sendAsync(user.getId(), stream -> eventsReportProvider.getExcel(
                             stream, user.getId(), deviceIds, groupIds, List.of(), from, to), report.getType(), from,
-                            to, emptyList, emptyList2);
+                            to, getDevicesList(deviceIds), getGroupsList(groupIds));
                     break;
                 case "route":
                     var routeReportProvider = injector.getInstance(RouteReportProvider.class);
                     reportMailer.sendAsync(user.getId(), stream -> routeReportProvider.getExcel(
                             stream, user.getId(), deviceIds, groupIds, from, to), report.getType(), from, to,
-                            emptyList, emptyList2);
+                            getDevicesList(deviceIds), getGroupsList(groupIds));
                     break;
                 case "summary":
                     var summaryReportProvider = injector.getInstance(SummaryReportProvider.class);
                     reportMailer.sendAsync(user.getId(), stream -> summaryReportProvider.getExcel(
                             stream, user.getId(), deviceIds, groupIds, from, to, false), report.getType(), from, to,
-                            emptyList, emptyList2);
+                            getDevicesList(deviceIds), getGroupsList(groupIds));
                     break;
                 case "trips":
                     var tripsReportProvider = injector.getInstance(TripsReportProvider.class);
                     reportMailer.sendAsync(user.getId(), stream -> tripsReportProvider.getExcel(
                             stream, user.getId(), deviceIds, groupIds, from, to), report.getType(), from, to,
-                            emptyList, emptyList2);
+                            getDevicesList(deviceIds), getGroupsList(groupIds));
                     break;
                 case "stops":
                     var stopsReportProvider = injector.getInstance(StopsReportProvider.class);
                     reportMailer.sendAsync(user.getId(), stream -> stopsReportProvider.getExcel(
                             stream, user.getId(), deviceIds, groupIds, from, to), report.getType(), from, to,
-                            emptyList, emptyList2);
+                            getDevicesList(deviceIds), getGroupsList(groupIds));
                     break;
                 default:
                     LOGGER.warn("Unsupported report type {}", report.getType());
