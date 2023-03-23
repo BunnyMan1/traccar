@@ -15,20 +15,26 @@
  */
 package org.traccar.reports.common;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.traccar.api.security.PermissionsService;
-import org.traccar.mail.MailManager;
-import org.traccar.model.User;
-import org.traccar.storage.StorageException;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
 
 import javax.activation.DataHandler;
 import javax.inject.Inject;
 import javax.mail.MessagingException;
 import javax.mail.internet.MimeBodyPart;
 import javax.mail.util.ByteArrayDataSource;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.traccar.api.security.PermissionsService;
+import org.traccar.mail.MailManager;
+import org.traccar.model.Device;
+import org.traccar.model.Group;
+import org.traccar.model.User;
+import org.traccar.storage.StorageException;
 
 public class ReportMailer {
 
@@ -43,19 +49,82 @@ public class ReportMailer {
         this.mailManager = mailManager;
     }
 
-    public void sendAsync(long userId, ReportExecutor executor) {
+    private SimpleDateFormat formatter = new SimpleDateFormat("dd-MM-yyyy");
+
+    public void sendAsync(long userId, ReportExecutor executor, String type, Date from, Date to, List<Device> devices,
+            List<Group> groups) {
         new Thread(() -> {
             try {
                 var stream = new ByteArrayOutputStream();
                 executor.execute(stream);
 
                 MimeBodyPart attachment = new MimeBodyPart();
-                attachment.setFileName("report.xlsx");
+
+                attachment.setFileName("report" + "-" + type + ".xlsx");
                 attachment.setDataHandler(new DataHandler(new ByteArrayDataSource(
                         stream.toByteArray(), "application/octet-stream")));
 
                 User user = permissionsService.getUser(userId);
-                mailManager.sendMessage(user, "Report", "The report is in the attachment.", attachment);
+
+                String appendage = "";
+
+                if (type == "trips") {
+                    appendage += " Trips";
+                } else if (type == "route") {
+                    appendage += " Routes";
+                } else if (type == "summary") {
+                    appendage += " Summary";
+                } else if (type == "summary-daily") {
+                    appendage += " Summary (Daily)";
+                } else if (type == "stops") {
+                    appendage += " Stops";
+                } else if (type == "events") {
+                    appendage += " Events";
+                }
+
+                appendage += "(" + formatter.format(from) + " to " + formatter.format(from) + ")";
+
+                String bodyString = "Report" + appendage + "\n\n";
+                if (devices.size() > 0) {
+                    bodyString += "Devices:\n";
+                    for (var device : devices) {
+                        bodyString += device.getName() + "\n";
+                    }
+                }
+
+                // if group size is greater than 0 then add the groups to the bodyString
+                if (groups.size() > 0) {
+                    bodyString += "\nGroups:\n";
+                    for (var group : groups) {
+                        bodyString += group.getName() + "\n";
+                    }
+                }
+
+                bodyString += "\nThe report is in the attachment.";
+
+                mailManager.sendMessage(user,
+                        // --> Subject of the email:
+                        /*
+                         * Report - <type> (<from> to <to>)
+                         */
+
+                        "Report" + appendage,
+
+                        // --> Body of the email:
+                        /*
+                         * Report - <type> (<from> to <to>)
+                         * 
+                         * Devices:     (if any)
+                         * <device1>
+                         * <device2>
+                         * 
+                         * Groups:      (if any)
+                         * <group1>
+                         * <group2>
+                         * 
+                         * The report is in the attachment.
+                         */
+                        bodyString, attachment);
             } catch (StorageException | IOException | MessagingException e) {
                 LOGGER.warn("Email report failed", e);
             }

@@ -15,10 +15,16 @@
  */
 package org.traccar.schedule;
 
-import com.google.inject.Injector;
-import com.google.inject.servlet.RequestScoper;
-import com.google.inject.servlet.ServletScopes;
-import net.fortuna.ical4j.model.component.VEvent;
+import java.util.Collections;
+import java.util.Date;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+
+import javax.inject.Inject;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.traccar.model.BaseModel;
@@ -39,13 +45,11 @@ import org.traccar.storage.query.Columns;
 import org.traccar.storage.query.Condition;
 import org.traccar.storage.query.Request;
 
-import javax.inject.Inject;
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
+import com.google.inject.Injector;
+import com.google.inject.servlet.RequestScoper;
+import com.google.inject.servlet.ServletScopes;
+
+import net.fortuna.ical4j.model.component.VEvent;
 
 public class TaskReports implements ScheduleTask {
 
@@ -95,6 +99,26 @@ public class TaskReports implements ScheduleTask {
         }
     }
 
+    private List<Group> getGroupsList(List<Long> groupIds) throws StorageException {
+        List<Group> result = new LinkedList<>();
+        for (Long groupId : groupIds) {
+            result.addAll(storage.getObjects(Group.class, new Request(
+                    new Columns.All(),
+                    new Condition.Equals("id", groupId))));
+        }
+        return result;
+    }
+
+    private List<Device> getDevicesList(List<Long> deviceIds) throws StorageException {
+        List<Device> result = new LinkedList<>();
+        for (Long deviceId : deviceIds) {
+            result.addAll(storage.getObjects(Device.class, new Request(
+                    new Columns.All(),
+                    new Condition.Equals("id", deviceId))));
+        }
+        return result;
+    }
+
     private void executeReport(Report report, Date from, Date to) throws StorageException {
 
         var deviceIds = storage.getObjects(Device.class, new Request(
@@ -116,27 +140,32 @@ public class TaskReports implements ScheduleTask {
                 case "events":
                     var eventsReportProvider = injector.getInstance(EventsReportProvider.class);
                     reportMailer.sendAsync(user.getId(), stream -> eventsReportProvider.getExcel(
-                            stream, user.getId(), deviceIds, groupIds, List.of(), from, to));
+                            stream, user.getId(), deviceIds, groupIds, List.of(), from, to), report.getType(), from,
+                            to, getDevicesList(deviceIds), getGroupsList(groupIds));
                     break;
                 case "route":
                     var routeReportProvider = injector.getInstance(RouteReportProvider.class);
                     reportMailer.sendAsync(user.getId(), stream -> routeReportProvider.getExcel(
-                            stream, user.getId(), deviceIds, groupIds, from, to));
+                            stream, user.getId(), deviceIds, groupIds, from, to), report.getType(), from, to,
+                            getDevicesList(deviceIds), getGroupsList(groupIds));
                     break;
                 case "summary":
                     var summaryReportProvider = injector.getInstance(SummaryReportProvider.class);
                     reportMailer.sendAsync(user.getId(), stream -> summaryReportProvider.getExcel(
-                            stream, user.getId(), deviceIds, groupIds, from, to, false));
+                            stream, user.getId(), deviceIds, groupIds, from, to, false), report.getType(), from, to,
+                            getDevicesList(deviceIds), getGroupsList(groupIds));
                     break;
                 case "trips":
                     var tripsReportProvider = injector.getInstance(TripsReportProvider.class);
                     reportMailer.sendAsync(user.getId(), stream -> tripsReportProvider.getExcel(
-                            stream, user.getId(), deviceIds, groupIds, from, to));
+                            stream, user.getId(), deviceIds, groupIds, from, to), report.getType(), from, to,
+                            getDevicesList(deviceIds), getGroupsList(groupIds));
                     break;
                 case "stops":
                     var stopsReportProvider = injector.getInstance(StopsReportProvider.class);
                     reportMailer.sendAsync(user.getId(), stream -> stopsReportProvider.getExcel(
-                            stream, user.getId(), deviceIds, groupIds, from, to));
+                            stream, user.getId(), deviceIds, groupIds, from, to), report.getType(), from, to,
+                            getDevicesList(deviceIds), getGroupsList(groupIds));
                     break;
                 default:
                     LOGGER.warn("Unsupported report type {}", report.getType());
