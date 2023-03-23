@@ -61,6 +61,7 @@ public class TaskReports implements ScheduleTask {
     private final Injector injector;
 
     private List<Device> emptyList = new ArrayList<Device>();
+    private List<Group> emptyList2 = new ArrayList<Group>();
 
     @Inject
     public TaskReports(Storage storage, Injector injector) {
@@ -123,31 +124,31 @@ public class TaskReports implements ScheduleTask {
                     var eventsReportProvider = injector.getInstance(EventsReportProvider.class);
                     reportMailer.sendAsync(user.getId(), stream -> eventsReportProvider.getExcel(
                             stream, user.getId(), deviceIds, groupIds, List.of(), from, to), report.getType(), from,
-                            to, emptyList);
+                            to, emptyList, emptyList2);
                     break;
                 case "route":
                     var routeReportProvider = injector.getInstance(RouteReportProvider.class);
                     reportMailer.sendAsync(user.getId(), stream -> routeReportProvider.getExcel(
                             stream, user.getId(), deviceIds, groupIds, from, to), report.getType(), from, to,
-                            emptyList);
+                            emptyList, emptyList2);
                     break;
                 case "summary":
                     var summaryReportProvider = injector.getInstance(SummaryReportProvider.class);
                     reportMailer.sendAsync(user.getId(), stream -> summaryReportProvider.getExcel(
                             stream, user.getId(), deviceIds, groupIds, from, to, false), report.getType(), from, to,
-                            emptyList);
+                            emptyList, emptyList2);
                     break;
                 case "trips":
                     var tripsReportProvider = injector.getInstance(TripsReportProvider.class);
                     reportMailer.sendAsync(user.getId(), stream -> tripsReportProvider.getExcel(
                             stream, user.getId(), deviceIds, groupIds, from, to), report.getType(), from, to,
-                            emptyList);
+                            emptyList, emptyList2);
                     break;
                 case "stops":
                     var stopsReportProvider = injector.getInstance(StopsReportProvider.class);
                     reportMailer.sendAsync(user.getId(), stream -> stopsReportProvider.getExcel(
                             stream, user.getId(), deviceIds, groupIds, from, to), report.getType(), from, to,
-                            emptyList);
+                            emptyList, emptyList2);
                     break;
                 default:
                     LOGGER.warn("Unsupported report type {}", report.getType());

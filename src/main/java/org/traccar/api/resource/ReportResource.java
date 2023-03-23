@@ -38,6 +38,7 @@ import org.traccar.api.SimpleObjectResource;
 import org.traccar.helper.LogAction;
 import org.traccar.model.Device;
 import org.traccar.model.Event;
+import org.traccar.model.Group;
 import org.traccar.model.Position;
 import org.traccar.model.Report;
 import org.traccar.model.User;
@@ -91,6 +92,18 @@ public class ReportResource extends SimpleObjectResource<Report> {
         super(Report.class);
     }
 
+    private List<Group> getGroupsList(List<Long> groupIds) throws StorageException {
+        List<Group> result = new LinkedList<>();
+        for (Long groupId : groupIds) {
+            result.addAll(storage.getObjects(Group.class, new Request(
+                    new Columns.All(),
+                    new Condition.And(
+                            new Condition.Equals("id", groupId),
+                            new Condition.Permission(User.class, getUserId(), Group.class)))));
+        }
+        return result;
+    }
+
     private List<Device> getDevicesList(List<Long> deviceIds) throws StorageException {
         List<Device> result = new LinkedList<>();
         for (Long deviceId : deviceIds) {
@@ -104,9 +117,9 @@ public class ReportResource extends SimpleObjectResource<Report> {
     }
 
     private Response executeReport(long userId, boolean mail, ReportExecutor executor, String reportType,
-            Date fromDate, Date toDate, List<Device> device ) {
+            Date fromDate, Date toDate, List<Device> devices, List<Group> groups) {
         if (mail) {
-            reportMailer.sendAsync(userId, executor, reportType, fromDate, toDate, device);
+            reportMailer.sendAsync(userId, executor, reportType, fromDate, toDate, devices, groups);
             return Response.noContent().build();
         } else {
             StreamingOutput stream = output -> {
@@ -158,7 +171,7 @@ public class ReportResource extends SimpleObjectResource<Report> {
         return executeReport(getUserId(), mail, stream -> {
             LogAction.logReport(getUserId(), "route", from, to, deviceIds, groupIds);
             routeReportProvider.getExcel(stream, getUserId(), deviceIds, groupIds, from, to);
-        }, "route", from, to, getDevicesList(deviceIds));
+        }, "route", from, to, getDevicesList(deviceIds), getGroupsList(groupIds));
     }
 
     @Path("route/{type:xlsx|mail}")
@@ -200,7 +213,7 @@ public class ReportResource extends SimpleObjectResource<Report> {
         return executeReport(getUserId(), mail, stream -> {
             LogAction.logReport(getUserId(), "events", from, to, deviceIds, groupIds);
             eventsReportProvider.getExcel(stream, getUserId(), deviceIds, groupIds, types, from, to);
-        }, "events", from, to, getDevicesList(deviceIds));
+        }, "events", from, to, getDevicesList(deviceIds), getGroupsList(groupIds));
     }
 
     @Path("events/{type:xlsx|mail}")
@@ -243,7 +256,7 @@ public class ReportResource extends SimpleObjectResource<Report> {
         return executeReport(getUserId(), mail, stream -> {
             LogAction.logReport(getUserId(), "summary", from, to, deviceIds, groupIds);
             summaryReportProvider.getExcel(stream, getUserId(), deviceIds, groupIds, from, to, daily);
-        }, "summary" + (daily ? "-daily" : ""), from, to, getDevicesList(deviceIds));
+        }, "summary" + (daily ? "-daily" : ""), from, to, getDevicesList(deviceIds), getGroupsList(groupIds));
     }
 
     // System.out.println();
@@ -287,7 +300,7 @@ public class ReportResource extends SimpleObjectResource<Report> {
         return executeReport(getUserId(), mail, stream -> {
             LogAction.logReport(getUserId(), "trips", from, to, deviceIds, groupIds);
             tripsReportProvider.getExcel(stream, getUserId(), deviceIds, groupIds, from, to);
-        }, "trips", from, to, getDevicesList(deviceIds));
+        }, "trips", from, to, getDevicesList(deviceIds), getGroupsList(groupIds));
     }
 
     @Path("trips/{type:xlsx|mail}")
@@ -327,7 +340,7 @@ public class ReportResource extends SimpleObjectResource<Report> {
         return executeReport(getUserId(), mail, stream -> {
             LogAction.logReport(getUserId(), "stops", from, to, deviceIds, groupIds);
             stopsReportProvider.getExcel(stream, getUserId(), deviceIds, groupIds, from, to);
-        }, "stops", from, to, getDevicesList(deviceIds));
+        }, "stops", from, to, getDevicesList(deviceIds), getGroupsList(groupIds));
     }
 
     @Path("stops/{type:xlsx|mail}")

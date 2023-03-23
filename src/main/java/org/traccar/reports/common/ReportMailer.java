@@ -19,7 +19,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.LinkedList;
 import java.util.List;
 
 import javax.activation.DataHandler;
@@ -27,21 +26,15 @@ import javax.inject.Inject;
 import javax.mail.MessagingException;
 import javax.mail.internet.MimeBodyPart;
 import javax.mail.util.ByteArrayDataSource;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.SecurityContext;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.traccar.api.security.PermissionsService;
-import org.traccar.api.security.UserPrincipal;
 import org.traccar.mail.MailManager;
 import org.traccar.model.Device;
+import org.traccar.model.Group;
 import org.traccar.model.User;
-import org.traccar.storage.Storage;
 import org.traccar.storage.StorageException;
-import org.traccar.storage.query.Columns;
-import org.traccar.storage.query.Condition;
-import org.traccar.storage.query.Request;
 
 public class ReportMailer {
 
@@ -58,7 +51,8 @@ public class ReportMailer {
 
     private SimpleDateFormat formatter = new SimpleDateFormat("dd-MM-yyyy");
 
-    public void sendAsync(long userId, ReportExecutor executor, String type, Date from, Date to, List<Device> devices) {
+    public void sendAsync(long userId, ReportExecutor executor, String type, Date from, Date to, List<Device> devices,
+            List<Group> groups) {
         new Thread(() -> {
             try {
                 var stream = new ByteArrayOutputStream();
@@ -97,7 +91,16 @@ public class ReportMailer {
                         bodyString += device.getName() + "\n";
                     }
                 }
-                bodyString += "The report is in the attachment.";
+
+                // if group size is greater than 0 then add the groups to the bodyString
+                if (groups.size() > 0) {
+                    bodyString += "\nGroups:\n";
+                    for (var group : groups) {
+                        bodyString += group.getName() + "\n";
+                    }
+                }
+
+                bodyString += "\nThe report is in the attachment.";
 
                 mailManager.sendMessage(user,
                         // --> Subject of the email:
