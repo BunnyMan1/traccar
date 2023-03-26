@@ -82,9 +82,9 @@ public class ReportMailer {
                     appendage += " Events";
                 }
 
-                appendage += "(" + formatter.format(from) + " to " + formatter.format(from) + ")";
+                appendage += " (" + formatter.format(from) + " to " + formatter.format(from) + ")";
 
-                String bodyString = "Report" + appendage + "\n\n";
+                String bodyString = "Report " + appendage + "\n\n";
                 if (devices.size() > 0) {
                     bodyString += "Devices:\n";
                     for (var device : devices) {

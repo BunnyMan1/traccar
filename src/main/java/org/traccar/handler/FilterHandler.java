@@ -36,6 +36,7 @@ import org.traccar.storage.query.Request;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.util.Date;
+import java.util.List;
 
 @Singleton
 @ChannelHandler.Sharable
@@ -114,6 +115,19 @@ public class FilterHandler extends BaseDataHandler {
         return false;
     }
 
+    private boolean filterDuplicateFromList(Position position, List<Position> lastItems) {
+        if (lastItems == null)
+            return false;
+        for (Position p : lastItems) {
+            var res = filterDuplicate(position, p);
+            if (res) {
+                // System.out.println("Sending true in filterDuplicateFromList.");
+                return true;
+            }
+        }
+        return false;
+    }
+
     private boolean filterFuture(Position position) {
         return filterFuture != 0 && position.getFixTime().getTime() > System.currentTimeMillis() + filterFuture;
     }
@@ -158,12 +172,47 @@ public class FilterHandler extends BaseDataHandler {
         return false;
     }
 
+    // private boolean filterMaxSpeedFromList(Position position, List<Position> lastItems) {
+    //     if (lastItems == null)
+    //         return false;
+    //     for (Position p : lastItems) {
+    //         var res = filterMaxSpeed(position, p);
+    //         if (res) {
+    //             System.out.println("Sending true in filterMaxSpeedFromList.");
+    //             return true;
+    //         }
+    //     }
+    //     return false;
+    // }
+
+    // private boolean filterMinPeriodFromList(Position position, List<Position> lastItems) {
+    //     if (lastItems == null)
+    //         return false;
+    //     for (Position p : lastItems) {
+    //         var res = filterMinPeriod(position, p);
+    //         if (res)
+    //             return true;
+    //     }
+    //     return false;
+    // }
+
     private boolean skipLimit(Position position, Position last) {
         if (skipLimit != 0 && last != null) {
             return (position.getServerTime().getTime() - last.getServerTime().getTime()) > skipLimit;
         }
         return false;
     }
+
+    // private boolean skipLimitFromList(Position position, List<Position>
+    // lastItems) {
+    // if (lastItems == null) return false;
+    // for (Position p : lastItems) {
+    // var res = skipLimit(position, p);
+    // if (res)
+    // return true;
+    // }
+    // return false;
+    // }
 
     private boolean skipAttributes(Position position) {
         if (skipAttributes) {
@@ -205,6 +254,7 @@ public class FilterHandler extends BaseDataHandler {
         long deviceId = position.getDeviceId();
         if (filterDuplicate || filterStatic || filterDistance > 0 || filterMaxSpeed > 0 || filterMinPeriod > 0) {
             Position preceding = null;
+            List<Position> precedingList = null;
             if (filterRelative) {
                 try {
                     Date newFixTime = position.getFixTime();
@@ -215,19 +265,33 @@ public class FilterHandler extends BaseDataHandler {
                 }
             } else {
                 preceding = cacheManager.getPosition(deviceId);
+                precedingList = cacheManager.getPositionsList(deviceId);
             }
-            if (filterDuplicate(position, preceding) && !skipLimit(position, preceding) && !skipAttributes(position)) {
+            if ((filterDuplicate(position, preceding) || filterDuplicateFromList(position, precedingList))
+                    && !skipLimit(position, preceding)
+                    && !skipAttributes(position)) {
                 filterType.append("Duplicate ");
             }
-            if (filterStatic(position) && !skipLimit(position, preceding) && !skipAttributes(position)) {
+            if (filterStatic(position)
+                    && !skipLimit(position, preceding)
+                    && !skipAttributes(position)) {
                 filterType.append("Static ");
             }
-            if (filterDistance(position, preceding) && !skipLimit(position, preceding) && !skipAttributes(position)) {
+            if (filterDistance(position, preceding)
+                    && !skipLimit(position, preceding)
+                    && !skipAttributes(position)) {
                 filterType.append("Distance ");
             }
+
+            // || filterMaxSpeedFromList(position, precedingList)
+            // Not using above comment in below if condition because maxSpeed is enough to
+            // check with last single position only.
+            // No need to check with many more previous positions.
             if (filterMaxSpeed(position, preceding)) {
                 filterType.append("MaxSpeed ");
             }
+
+            // || filterMinPeriodFromList(position, precedingList)
             if (filterMinPeriod(position, preceding)) {
                 filterType.append("MinPeriod ");
             }
