@@ -14,7 +14,7 @@ Deploy Steps:
 - On both Prod servers:
     - rm /home/bunny/build/*
 - Transfer build to server:
-    - rsync -a --progress traccar-linux-64-5.6.zip nconnect_gps:/home/bunny/build/ 
+    - rsync -a --progress traccar-linux-64-<traccar_version>.zip nconnect_gps:/home/bunny/build/
     - Repeat above step for nspira_gps too.
 - ssh into each server:
     - mkdir ./backup/<date>/
@@ -23,9 +23,11 @@ Deploy Steps:
     - cd build/
     - unzip traccar-linux-*.zip
     - sudo ./traccar.run
-    - Check if all okay - /opt/traccar/conf/traccar.xml
+    - Check if all okay:
+        - sudo nano /opt/traccar/conf/traccar.xml
+    - cd /opt/traccar/
     - ls -lt
-    - sudo service traccar start
+    - sudo service traccar start && tail -f /opt/traccar/logs/tracker-server.log
 - Check respective URLs, Login + Check console.
 
 Transfer code command example:
@@ -38,6 +40,7 @@ Check server logs:
 
 Check traccar service logs:
 - sudo journalctl -u traccar.service --since "2022-07-11" --no-pager
+- sudo journalctl -u traccar.service -f --since "1 hour ago"
 
 Sync Tags from Upstream/master:
 - https://stackoverflow.com/questions/70678073/how-do-i-sync-tags-to-a-forked-github-repo

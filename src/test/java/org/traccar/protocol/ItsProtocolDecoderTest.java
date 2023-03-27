@@ -125,6 +125,9 @@ public class ItsProtocolDecoderTest extends ProtocolTest {
         verifyPosition(decoder, text(
                 "$Header,iTriangle,1_37T02B0164MAIS_2,NR,1,L,864495034490141,KA01I2000,1,31032018,122247,22.845999,N,75.949005,E,0.0,44,16,545.0,1.19,0.65,AirTel,1,1,12.0,4.3,0,C,13,404,93,0456,16db,27,16dd,0456,22,3843,18ab,19,ebd8,0458,14,072c,18ab,0101,00,003735,0.0,0.0,0,()*48"));
 
+        verifyPosition(decoder, text(
+                "$Header,iTriangle,1_36T02B0164MAIS_6,NR,1,L,358250330004309,KA1234,1,05022021,182028,12.982697,N,77.548622,E,0.0,181.0,7,879.0,2.90,2.09,BSNL,0,1,23.0,3.9,1,C,14,404,71,ccc7,2ee0,37,2ee0,ccc6,33,3a98,f24f,32,3a98,f26d,30,3a98,f2a9,0000,01,000677,0.018,0.043,0.000000,()*04"));
+
         verifyNull(decoder, text(
                 "$Header,nliven,KA01I2000,861693034634154,1_37T02B0164MAIS,AIS140,12.976545,N,77.549759,E*50"));
 

@@ -80,7 +80,8 @@ public class ReportMailer {
                     appendage += " Stops ";
                 } else if (type.equals("events")) {
                     appendage += " Events ";
-                }
+                } else
+                    appendage += " ";
 
                 appendage += "(" + formatter.format(from) + " to " + formatter.format(from) + ")";
 
