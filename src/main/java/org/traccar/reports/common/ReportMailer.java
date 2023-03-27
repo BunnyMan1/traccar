@@ -68,35 +68,36 @@ public class ReportMailer {
 
                 String appendage = "";
 
-                if (type == "trips") {
-                    appendage += " Trips";
-                } else if (type == "route") {
-                    appendage += " Routes";
-                } else if (type == "summary") {
-                    appendage += " Summary";
-                } else if (type == "summary-daily") {
-                    appendage += " Summary (Daily)";
-                } else if (type == "stops") {
-                    appendage += " Stops";
-                } else if (type == "events") {
-                    appendage += " Events";
-                }
+                if (type.equals("trips")) {
+                    appendage += " Trips ";
+                } else if (type.equals("route")) {
+                    appendage += " Routes ";
+                } else if (type.equals("summary")) {
+                    appendage += " Summary ";
+                } else if (type.equals("summary-daily")) {
+                    appendage += " Summary (Daily) ";
+                } else if (type.equals("stops")) {
+                    appendage += " Stops ";
+                } else if (type.equals("events")) {
+                    appendage += " Events ";
+                } else
+                    appendage += " ";
 
-                appendage += " (" + formatter.format(from) + " to " + formatter.format(from) + ")";
+                appendage += "(" + formatter.format(from) + " to " + formatter.format(from) + ")";
 
-                String bodyString = "Report " + appendage + "\n\n";
+                String bodyString = "Report" + appendage + "<br />";
                 if (devices.size() > 0) {
-                    bodyString += "Devices:\n";
+                    bodyString += "<br />Devices:<br />";
                     for (var device : devices) {
-                        bodyString += device.getName() + "\n";
+                        bodyString += device.getName() + "<br />";
                     }
                 }
 
                 // if group size is greater than 0 then add the groups to the bodyString
                 if (groups.size() > 0) {
-                    bodyString += "\nGroups:\n";
+                    bodyString += "<br />Groups:<br />";
                     for (var group : groups) {
-                        bodyString += group.getName() + "\n";
+                        bodyString += group.getName() + "<br />";
                     }
                 }
 
@@ -114,11 +115,11 @@ public class ReportMailer {
                         /*
                          * Report - <type> (<from> to <to>)
                          * 
-                         * Devices:     (if any)
+                         * Devices: (if any)
                          * <device1>
                          * <device2>
                          * 
-                         * Groups:      (if any)
+                         * Groups: (if any)
                          * <group1>
                          * <group2>
                          * 
