@@ -149,7 +149,12 @@ public class TaskReports implements ScheduleTask {
         ReportMailer reportMailer = injector.getInstance(ReportMailer.class);
 
         for (User user : users) {
-            var tz = getUserPreferredTimeZone(user);
+            TimeZone tz = TimeZone.getTimeZone("UTC");
+            try {
+                tz = getUserPreferredTimeZone(user);
+            } catch (StorageException e) {
+                e.printStackTrace();
+            }
             switch (report.getType()) {
                 case "events":
                     var eventsReportProvider = injector.getInstance(EventsReportProvider.class);
@@ -186,6 +191,7 @@ public class TaskReports implements ScheduleTask {
                     break;
             }
         }
+
     }
 
 }
