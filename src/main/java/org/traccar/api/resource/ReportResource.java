@@ -20,6 +20,7 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.TimeZone;
 
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
@@ -36,11 +37,13 @@ import javax.ws.rs.core.StreamingOutput;
 
 import org.traccar.api.SimpleObjectResource;
 import org.traccar.helper.LogAction;
+import org.traccar.helper.model.UserUtil;
 import org.traccar.model.Device;
 import org.traccar.model.Event;
 import org.traccar.model.Group;
 import org.traccar.model.Position;
 import org.traccar.model.Report;
+import org.traccar.model.Server;
 import org.traccar.model.User;
 import org.traccar.model.UserRestrictions;
 import org.traccar.reports.CombinedReportProvider;
@@ -116,10 +119,27 @@ public class ReportResource extends SimpleObjectResource<Report> {
         return result;
     }
 
+    private TimeZone getUserPreferredTimeZone(long userId) throws StorageException {
+
+        User user = permissionsService.getUser(userId);
+
+        Server server = storage.getObject(
+                Server.class, new Request(new Columns.All()));
+
+        var tz = UserUtil.getTimezone(server, user);
+        return tz;
+    }
+
     private Response executeReport(long userId, boolean mail, ReportExecutor executor, String reportType,
             Date fromDate, Date toDate, List<Device> devices, List<Group> groups) {
+        TimeZone tz = TimeZone.getTimeZone("UTC");
+        try {
+            tz = getUserPreferredTimeZone(userId);
+        } catch (StorageException e) {
+            e.printStackTrace();
+        }
         if (mail) {
-            reportMailer.sendAsync(userId, executor, reportType, fromDate, toDate, devices, groups);
+            reportMailer.sendAsync(userId, executor, reportType, fromDate, toDate, devices, groups, tz);
             return Response.noContent().build();
         } else {
             StreamingOutput stream = output -> {
