@@ -19,6 +19,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.TimeZone;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -27,6 +28,7 @@ import javax.inject.Inject;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.traccar.helper.model.UserUtil;
 import org.traccar.model.BaseModel;
 import org.traccar.model.Calendar;
 import org.traccar.model.Device;
@@ -44,6 +46,8 @@ import org.traccar.storage.StorageException;
 import org.traccar.storage.query.Columns;
 import org.traccar.storage.query.Condition;
 import org.traccar.storage.query.Request;
+
+import org.traccar.model.Server;
 
 import com.google.inject.Injector;
 import com.google.inject.servlet.RequestScoper;
@@ -119,6 +123,15 @@ public class TaskReports implements ScheduleTask {
         return result;
     }
 
+    private TimeZone getUserPreferredTimeZone(User user) throws StorageException {
+
+        Server server = storage.getObject(
+                Server.class, new Request(new Columns.All()));
+
+        var tz = UserUtil.getTimezone(server, user);
+        return tz;
+    }
+
     private void executeReport(Report report, Date from, Date to) throws StorageException {
 
         var deviceIds = storage.getObjects(Device.class, new Request(
@@ -136,42 +149,49 @@ public class TaskReports implements ScheduleTask {
         ReportMailer reportMailer = injector.getInstance(ReportMailer.class);
 
         for (User user : users) {
+            TimeZone tz = TimeZone.getTimeZone("UTC");
+            try {
+                tz = getUserPreferredTimeZone(user);
+            } catch (StorageException e) {
+                e.printStackTrace();
+            }
             switch (report.getType()) {
                 case "events":
                     var eventsReportProvider = injector.getInstance(EventsReportProvider.class);
                     reportMailer.sendAsync(user.getId(), stream -> eventsReportProvider.getExcel(
                             stream, user.getId(), deviceIds, groupIds, List.of(), from, to), report.getType(), from,
-                            to, getDevicesList(deviceIds), getGroupsList(groupIds));
+                            to, getDevicesList(deviceIds), getGroupsList(groupIds), tz);
                     break;
                 case "route":
                     var routeReportProvider = injector.getInstance(RouteReportProvider.class);
                     reportMailer.sendAsync(user.getId(), stream -> routeReportProvider.getExcel(
                             stream, user.getId(), deviceIds, groupIds, from, to), report.getType(), from, to,
-                            getDevicesList(deviceIds), getGroupsList(groupIds));
+                            getDevicesList(deviceIds), getGroupsList(groupIds), tz);
                     break;
                 case "summary":
                     var summaryReportProvider = injector.getInstance(SummaryReportProvider.class);
                     reportMailer.sendAsync(user.getId(), stream -> summaryReportProvider.getExcel(
                             stream, user.getId(), deviceIds, groupIds, from, to, false), report.getType(), from, to,
-                            getDevicesList(deviceIds), getGroupsList(groupIds));
+                            getDevicesList(deviceIds), getGroupsList(groupIds), tz);
                     break;
                 case "trips":
                     var tripsReportProvider = injector.getInstance(TripsReportProvider.class);
                     reportMailer.sendAsync(user.getId(), stream -> tripsReportProvider.getExcel(
                             stream, user.getId(), deviceIds, groupIds, from, to), report.getType(), from, to,
-                            getDevicesList(deviceIds), getGroupsList(groupIds));
+                            getDevicesList(deviceIds), getGroupsList(groupIds), tz);
                     break;
                 case "stops":
                     var stopsReportProvider = injector.getInstance(StopsReportProvider.class);
                     reportMailer.sendAsync(user.getId(), stream -> stopsReportProvider.getExcel(
                             stream, user.getId(), deviceIds, groupIds, from, to), report.getType(), from, to,
-                            getDevicesList(deviceIds), getGroupsList(groupIds));
+                            getDevicesList(deviceIds), getGroupsList(groupIds), tz);
                     break;
                 default:
                     LOGGER.warn("Unsupported report type {}", report.getType());
                     break;
             }
         }
+
     }
 
 }

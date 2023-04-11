@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
+import java.util.TimeZone;
 
 import javax.activation.DataHandler;
 import javax.inject.Inject;
@@ -52,9 +53,10 @@ public class ReportMailer {
     private SimpleDateFormat formatter = new SimpleDateFormat("dd-MM-yyyy");
 
     public void sendAsync(long userId, ReportExecutor executor, String type, Date from, Date to, List<Device> devices,
-            List<Group> groups) {
+            List<Group> groups, TimeZone timeZone) {
         new Thread(() -> {
             try {
+                formatter.setTimeZone(timeZone);
                 var stream = new ByteArrayOutputStream();
                 executor.execute(stream);
 
@@ -82,7 +84,6 @@ public class ReportMailer {
                     appendage += " Events ";
                 } else
                     appendage += " ";
-
                 appendage += "(" + formatter.format(from) + " to " + formatter.format(from) + ")";
 
                 String bodyString = "Report" + appendage + "<br />";
