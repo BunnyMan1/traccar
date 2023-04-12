@@ -314,6 +314,35 @@ public final class QueryBuilder {
         return this;
     }
 
+    public <T> void setObject(T entity, List<String> columns, Map<String, Object> paramMap) {
+    for (String column : columns) {
+        try {
+            Method method = entity.getClass().getMethod("get" + capitalize(column));
+            Object value = method.invoke(entity);
+            paramMap.put(column, value);
+        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+            throw new IllegalStateException("Unable to set object parameters", e);
+        }
+    }
+}
+
+private String capitalize(String input) {
+    if (input == null || input.isEmpty()) {
+        return input;
+    }
+    return input.substring(0, 1).toUpperCase() + input.substring(1);
+}
+
+public void setParameters(Map<String, Object> paramMap) throws SQLException {
+    for (Map.Entry<String, List<Integer>> entry : indexMap.entrySet()) {
+        String key = entry.getKey();
+        Object value = paramMap.get(key);
+        for (int index : entry.getValue()) {
+            statement.setObject(index, value);
+        }
+    }
+}
+
     private interface ResultSetProcessor<T> {
         void process(T object, ResultSet resultSet) throws SQLException;
     }

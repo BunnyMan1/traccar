@@ -17,8 +17,10 @@ package org.traccar.storage;
 
 import org.traccar.model.BaseModel;
 import org.traccar.model.Permission;
+import org.traccar.model.Position;
 import org.traccar.storage.query.Request;
 
+import java.sql.SQLException;
 import java.util.List;
 
 public abstract class Storage {
@@ -28,6 +30,8 @@ public abstract class Storage {
     public abstract <T> long addObject(T entity, Request request) throws StorageException;
 
     public abstract <T> void updateObject(T entity, Request request) throws StorageException;
+
+    public abstract  void updatePositions(List<Position> list, Request request) throws StorageException, SQLException;
 
     public abstract void removeObject(Class<?> clazz, Request request) throws StorageException;
 
@@ -49,5 +53,8 @@ public abstract class Storage {
         var objects = getObjects(clazz, request);
         return objects.isEmpty() ? null : objects.get(0);
     }
+
+   public abstract <T> long addObjects(List<T> entities, Request request) throws StorageException;
+
 
 }

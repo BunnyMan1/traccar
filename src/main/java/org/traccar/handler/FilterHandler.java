@@ -65,6 +65,7 @@ public class FilterHandler extends BaseDataHandler {
 
     @Inject
     public FilterHandler(Config config, CacheManager cacheManager, Storage storage) {
+        // System.out.println("inside filter handler");
         enabled = config.getBoolean(Keys.FILTER_ENABLE);
         filterInvalid = config.getBoolean(Keys.FILTER_INVALID);
         filterZero = config.getBoolean(Keys.FILTER_ZERO);
@@ -85,6 +86,7 @@ public class FilterHandler extends BaseDataHandler {
     }
 
     private Position getPrecedingPosition(long deviceId, Date date) throws StorageException {
+        // System.out.println(" inside get preceeding pos");
         return storage.getObject(Position.class, new Request(
                 new Columns.All(),
                 new Condition.And(
@@ -94,28 +96,42 @@ public class FilterHandler extends BaseDataHandler {
     }
 
     private boolean filterInvalid(Position position) {
+        // System.out.println("inside filter invalid");
         return filterInvalid && (!position.getValid()
                 || position.getLatitude() > 90 || position.getLongitude() > 180
                 || position.getLatitude() < -90 || position.getLongitude() < -180);
     }
 
     private boolean filterZero(Position position) {
+        // System.out.println("inside filter zero");
         return filterZero && position.getLatitude() == 0.0 && position.getLongitude() == 0.0;
     }
 
     private boolean filterDuplicate(Position position, Position last) {
+    //    System.out.println(" ---------------------------------> cond.  " );
+    //    System.out.println(last!= null);
         if (filterDuplicate && last != null && position.getFixTime().equals(last.getFixTime())) {
             for (String key : position.getAttributes().keySet()) {
+
+                if (key.equals("archive"))
+                    continue;
+                if (key.equals("hours"))
+                    continue;
+
                 if (!last.hasAttribute(key)) {
+                    System.out.println("Sending false in filterDuplicate due to : " + key);
                     return false;
                 }
             }
+            // System.out.println("True : " + position.getAddress() +
+            // position.getFixTime());
             return true;
         }
         return false;
     }
 
     private boolean filterDuplicateFromList(Position position, List<Position> lastItems) {
+        // System.out.println("inside filter duplicate from list");
         if (lastItems == null)
             return false;
         for (Position p : lastItems) {
@@ -129,26 +145,32 @@ public class FilterHandler extends BaseDataHandler {
     }
 
     private boolean filterFuture(Position position) {
+        // System.out.println("inside filter future");
         return filterFuture != 0 && position.getFixTime().getTime() > System.currentTimeMillis() + filterFuture;
     }
 
     private boolean filterPast(Position position) {
+        // System.out.println("inside filter past");
         return filterPast != 0 && position.getFixTime().getTime() < System.currentTimeMillis() - filterPast;
     }
 
     private boolean filterAccuracy(Position position) {
+        // System.out.println("inside filter accuracy");
         return filterAccuracy != 0 && position.getAccuracy() > filterAccuracy;
     }
 
     private boolean filterApproximate(Position position) {
+        // System.out.println("inside filter approximate");
         return filterApproximate && position.getBoolean(Position.KEY_APPROXIMATE);
     }
 
     private boolean filterStatic(Position position) {
+        // System.out.println("inside filter static");
         return filterStatic && position.getSpeed() == 0.0;
     }
 
     private boolean filterDistance(Position position, Position last) {
+        // System.out.println("inside filter distance");
         if (filterDistance != 0 && last != null) {
             return position.getDouble(Position.KEY_DISTANCE) < filterDistance;
         }
@@ -156,6 +178,7 @@ public class FilterHandler extends BaseDataHandler {
     }
 
     private boolean filterMaxSpeed(Position position, Position last) {
+        // System.out.println("inside filter max speed");
         if (filterMaxSpeed != 0 && last != null) {
             double distance = position.getDouble(Position.KEY_DISTANCE);
             double time = position.getFixTime().getTime() - last.getFixTime().getTime();
@@ -165,6 +188,7 @@ public class FilterHandler extends BaseDataHandler {
     }
 
     private boolean filterMinPeriod(Position position, Position last) {
+        // System.out.println("inside filter min period");
         if (filterMinPeriod != 0 && last != null) {
             long time = position.getFixTime().getTime() - last.getFixTime().getTime();
             return time > 0 && time < filterMinPeriod;
@@ -172,31 +196,34 @@ public class FilterHandler extends BaseDataHandler {
         return false;
     }
 
-    // private boolean filterMaxSpeedFromList(Position position, List<Position> lastItems) {
-    //     if (lastItems == null)
-    //         return false;
-    //     for (Position p : lastItems) {
-    //         var res = filterMaxSpeed(position, p);
-    //         if (res) {
-    //             System.out.println("Sending true in filterMaxSpeedFromList.");
-    //             return true;
-    //         }
-    //     }
-    //     return false;
+    // private boolean filterMaxSpeedFromList(Position position, List<Position>
+    // lastItems) {
+    // if (lastItems == null)
+    // return false;
+    // for (Position p : lastItems) {
+    // var res = filterMaxSpeed(position, p);
+    // if (res) {
+    // System.out.println("Sending true in filterMaxSpeedFromList.");
+    // return true;
+    // }
+    // }
+    // return false;
     // }
 
-    // private boolean filterMinPeriodFromList(Position position, List<Position> lastItems) {
-    //     if (lastItems == null)
-    //         return false;
-    //     for (Position p : lastItems) {
-    //         var res = filterMinPeriod(position, p);
-    //         if (res)
-    //             return true;
-    //     }
-    //     return false;
+    // private boolean filterMinPeriodFromList(Position position, List<Position>
+    // lastItems) {
+    // if (lastItems == null)
+    // return false;
+    // for (Position p : lastItems) {
+    // var res = filterMinPeriod(position, p);
+    // if (res)
+    // return true;
+    // }
+    // return false;
     // }
 
     private boolean skipLimit(Position position, Position last) {
+        // System.out.println("inside skip limit");
         if (skipLimit != 0 && last != null) {
             return (position.getServerTime().getTime() - last.getServerTime().getTime()) > skipLimit;
         }
@@ -215,6 +242,7 @@ public class FilterHandler extends BaseDataHandler {
     // }
 
     private boolean skipAttributes(Position position) {
+        // System.out.println("inside skip attributes");
         if (skipAttributes) {
             String string = AttributeUtil.lookup(cacheManager, Keys.FILTER_SKIP_ATTRIBUTES, position.getDeviceId());
             for (String attribute : string.split("[ ,]")) {
@@ -227,7 +255,7 @@ public class FilterHandler extends BaseDataHandler {
     }
 
     private boolean filter(Position position) {
-
+        System.out.println("inside filter");
         StringBuilder filterType = new StringBuilder();
 
         // filter out invalid data

@@ -57,6 +57,7 @@ public class DistanceHandler extends BaseDataHandler {
         double totalDistance = 0.0;
 
         Position last = cacheManager.getPosition(position.getDeviceId());
+
         if (last != null) {
             totalDistance = last.getDouble(Position.KEY_TOTAL_DISTANCE);
             if (!position.hasAttribute(Position.KEY_DISTANCE)) {
@@ -79,7 +80,6 @@ public class DistanceHandler extends BaseDataHandler {
         position.set(Position.KEY_DISTANCE, distance);
         totalDistance = BigDecimal.valueOf(totalDistance + distance).setScale(2, RoundingMode.HALF_EVEN).doubleValue();
         position.set(Position.KEY_TOTAL_DISTANCE, totalDistance);
-
         return position;
     }
 

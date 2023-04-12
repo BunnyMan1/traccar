@@ -15,6 +15,7 @@
  */
 package org.traccar.storage;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.traccar.config.Config;
 import org.traccar.model.BaseModel;
@@ -22,6 +23,7 @@ import org.traccar.model.Device;
 import org.traccar.model.Group;
 import org.traccar.model.GroupedModel;
 import org.traccar.model.Permission;
+import org.traccar.model.Position;
 import org.traccar.storage.query.Columns;
 import org.traccar.storage.query.Condition;
 import org.traccar.storage.query.Order;
@@ -29,7 +31,10 @@ import org.traccar.storage.query.Request;
 
 import javax.inject.Inject;
 import javax.sql.DataSource;
+
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -89,6 +94,7 @@ public class DatabaseStorage extends Storage {
         query.append(") VALUES (");
         query.append(formatColumns(columns, c -> ':' + c));
         query.append(")");
+        // System.out.println(" query " + query.toString());
         try {
             QueryBuilder builder = QueryBuilder.create(config, dataSource, objectMapper, query.toString(), true);
             builder.setObject(entity, columns);
@@ -113,6 +119,205 @@ public class DatabaseStorage extends Storage {
                 builder.setValue(variable.getKey(), variable.getValue());
             }
             builder.executeUpdate();
+        } catch (SQLException e) {
+            throw new StorageException(e);
+        }
+    }
+
+    @Override
+    public void updatePositions(List<Position> entities, Request request) throws StorageException, SQLException {
+
+        System.out.println(" to updateObjects " + entities.size());
+        if (entities.isEmpty()) {
+            return;
+        }
+        List<String> columns = Arrays.asList(
+                "address",
+                "protocol",
+                "valid",
+                "longitude",
+                "latitude",
+                "network",
+                "deviceTime",
+                "accuracy",
+                "serverTime",
+                "fixTime",
+                "altitude",
+                "speed",
+                "course",
+                "deviceId",
+                "attributes",
+                "id");
+        // columns = ["valid", "longitude", "latitude", "network", "deviceTime",
+        // "accuracy", "serverTime", "fixTime", "altitude", "speed", "course",
+        // "address", "protocol", "deviceId", "attributes", "id"];
+        System.out.println(" columns " + columns);
+        var classname = getStorageName(entities.get(0).getClass());
+        System.out.println(" classname " + classname);
+        StringBuilder query = new StringBuilder(
+                "INSERT INTO " + classname + " (" + formatColumns(columns, c -> c) + " ) VALUES ");
+
+        for (int i = 0; i < entities.size(); i++) {
+            var qs = "";
+            for (int j = 0; j < columns.size(); j++) {
+                if (j == columns.size() - 1)
+                    qs += "?";
+                else
+                    qs += "?, ";
+            }
+
+            query.append("(" + qs + ") ");
+            if (i != entities.size() - 1)
+                query.append(", ");
+            // query.append("(?), ");
+        }
+
+        query.append("ON DUPLICATE KEY UPDATE attributes = VALUES(attributes)");
+
+        System.out.println(" query " + query.toString());
+
+        var connection = dataSource.getConnection();
+
+        PreparedStatement ps = connection.prepareStatement(query.toString());
+
+        for (int i = 0; i < entities.size(); i++) {
+
+            var entity = entities.get(i);
+
+            int index = (i * columns.size() + 1);
+
+            System.out.println(" index " + index);
+            ps.setString(index, entity.getAddress());
+            ps.setString(index + 1, entity.getProtocol());
+            ps.setBoolean(index + 2, entity.getValid());
+            ps.setDouble(index + 3, entity.getLongitude());
+            ps.setDouble(index + 4, entity.getLatitude());
+            ps.setObject(index + 5, entity.getNetwork().toString());
+            ps.setDate(index + 6, new java.sql.Date(entity.getDeviceTime().getTime()));
+            ps.setDouble(index + 7, entity.getAccuracy());
+            ps.setDate(index + 8, new java.sql.Date(entity.getServerTime().getTime()));
+            ps.setDate(index + 9, new java.sql.Date(entity.getFixTime().getTime()));
+            ps.setDouble(index + 10, entity.getAltitude());
+            ps.setDouble(index + 11, entity.getSpeed());
+            ps.setDouble(index + 12, entity.getCourse());
+            ps.setLong(index + 13, entity.getDeviceId());
+            try {
+                ps.setObject(index + 14, objectMapper.writeValueAsString(entity.getAttributes()));
+            } catch (JsonProcessingException e) {
+                e.printStackTrace();
+            }
+            ps.setLong(index + 15, entity.getId());
+
+        }
+        try {
+            var res = ps.executeUpdate();
+            System.out.println(" res " + res);
+
+            System.out.println(" Succesfully updated : " + entities.size() + " items.");
+
+        } catch (SQLException e) {
+            throw new StorageException(e);
+        }
+    }
+    // FIRST TRY
+    // @Override
+    // public <T> long addObjects(List<T> entities, Request request) throws
+    // StorageException {
+    // if (entities == null || entities.isEmpty()) {
+    // return 0;
+    // }
+
+    // List<String> columns =
+    // request.getColumns().getColumns(entities.get(0).getClass(), "get");
+    // StringBuilder query = new StringBuilder("INSERT INTO ");
+    // query.append(getStorageName(entities.get(0).getClass()));
+    // query.append("(");
+    // query.append(formatColumns(columns, c -> c));
+    // query.append(") VALUES ");
+
+    // // Appending multiple values
+    // for (int i = 0; i < entities.size(); i++) {
+    // final var a = i;
+    // query.append("(");
+    // query.append(formatColumns(columns, c -> ':' + c + a));
+    // query.append(")");
+    // if (i < entities.size() - 1) {
+    // query.append(",");
+    // }
+    // }
+
+    // // On duplicate key update
+    // query.append(" ON DUPLICATE KEY UPDATE ");
+    // for (int i = 0; i < columns.size(); i++) {
+    // if (!"id".equalsIgnoreCase(columns.get(i))) {
+    // query.append(columns.get(i)).append(" =
+    // VALUES(").append(columns.get(i)).append(")");
+    // if (i < columns.size() - 1) {
+    // query.append(",");
+    // }
+    // }
+    // }
+
+    // try {
+    // QueryBuilder builder = QueryBuilder.create(config, dataSource, objectMapper,
+    // query.toString(), true);
+    // for (int i = 0; i < entities.size(); i++) {
+    // final var a = i;
+    // builder.setObject(entities.get(i), columns.stream().map(c -> c +
+    // a).collect(Collectors.toList()));
+    // }
+    // return builder.executeUpdate();
+    // } catch (SQLException e) {
+    // throw new StorageException(e);
+    // }
+    // }
+
+    public <T> long addObjects(List<T> entities, Request request) throws StorageException {
+        if (entities == null || entities.isEmpty()) {
+            return 0;
+        }
+
+        List<String> columns = request.getColumns().getColumns(entities.get(0).getClass(), "get");
+        StringBuilder query = new StringBuilder("INSERT INTO ");
+        query.append(getStorageName(entities.get(0).getClass()));
+        query.append("(");
+        query.append(formatColumns(columns, c -> c));
+        query.append(") VALUES ");
+
+        // Appending multiple values
+        for (int i = 0; i < entities.size(); i++) {
+            final var a = i;
+            query.append("(");
+            query.append(formatColumns(columns, c -> ':' + c + a));
+            query.append(")");
+            if (i < entities.size() - 1) {
+                query.append(",");
+            }
+        }
+
+        // On duplicate key update
+        query.append(" ON DUPLICATE KEY UPDATE ");
+        for (int i = 0; i < columns.size(); i++) {
+            if (!"id".equalsIgnoreCase(columns.get(i))) {
+                query.append(columns.get(i)).append(" = VALUES(").append(columns.get(i)).append(")");
+                if (i < columns.size() - 1) {
+                    query.append(",");
+                }
+            }
+        }
+        // if the last character in query is a comma, remove it
+        if (query.charAt(query.length() - 1) == ',') {
+            query.deleteCharAt(query.length() - 1);
+        }
+        System.out.println(" Query : " + query.toString());
+        try {
+            QueryBuilder builder = QueryBuilder.create(config, dataSource, objectMapper, query.toString(), true);
+            for (int i = 0; i < entities.size(); i++) {
+                Map<String, Object> paramMap = new HashMap<>();
+                builder.setObject(entities.get(i), columns, paramMap);
+                builder.setParameters(paramMap);
+            }
+            return builder.executeUpdate();
         } catch (SQLException e) {
             throw new StorageException(e);
         }

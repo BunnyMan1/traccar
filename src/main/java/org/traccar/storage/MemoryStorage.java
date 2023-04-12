@@ -18,8 +18,10 @@ package org.traccar.storage;
 import org.traccar.model.BaseModel;
 import org.traccar.model.Pair;
 import org.traccar.model.Permission;
+import org.traccar.model.Position;
 import org.traccar.storage.query.Request;
 
+import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -75,5 +77,19 @@ public class MemoryStorage extends Storage {
         getPermissionsSet(permission.getOwnerClass(), permission.getPropertyClass())
                 .remove(new Pair<>(permission.getOwnerId(), permission.getPropertyId()));
     }
+
+    @Override
+    public void updatePositions(List<Position> list, Request request) throws StorageException, SQLException {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'updateObjects'");
+    }
+
+    @Override
+    public <T> long addObjects(List<T> entities, Request request) throws StorageException {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'addObjects'");
+    }
+
+
 
 }

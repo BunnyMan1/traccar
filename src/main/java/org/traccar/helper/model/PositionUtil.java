@@ -55,13 +55,24 @@ public final class PositionUtil {
     }
 
     public static List<Position> getPositions(
-            Storage storage, long deviceId, Date from, Date to) throws StorageException {
-        return storage.getObjects(Position.class, new Request(
+            Storage storage, long deviceId, Date from, Date to ) throws StorageException {
+        var res = storage.getObjects(Position.class, new Request(
                 new Columns.All(),
                 new Condition.And(
                         new Condition.Equals("deviceId", deviceId),
                         new Condition.Between("fixTime", "from", from, "to", to)),
                 new Order("fixTime")));
+
+        // if (res.isEmpty())
+        //     return res;
+
+        // var rollingSum = res.get(0).getDouble(Position.KEY_TOTAL_DISTANCE);
+
+        // for (var position : res) {
+        //     rollingSum += position.getDouble(Position.KEY_DISTANCE);
+        //     position.set(Position.KEY_TOTAL_DISTANCE, rollingSum);
+        // }
+        return res;
     }
 
     public static List<Position> getLatestPositions(Storage storage, long userId) throws StorageException {

@@ -41,6 +41,7 @@ import org.traccar.handler.RemoteAddressHandler;
 import org.traccar.handler.SpeedLimitHandler;
 import org.traccar.handler.StandardLoggingHandler;
 import org.traccar.handler.TimeHandler;
+import org.traccar.handler.TotalDistanceCorrectionHandler;
 import org.traccar.handler.events.AlertEventHandler;
 import org.traccar.handler.events.BehaviorEventHandler;
 import org.traccar.handler.events.CommandResultEventHandler;
@@ -102,6 +103,7 @@ public abstract class BasePipelineFactory extends ChannelInitializer<Channel> {
 
     @Override
     protected void initChannel(Channel channel) {
+        System.out.println("initChannel ===================================================");
         final ChannelPipeline pipeline = channel.pipeline();
 
         addTransportHandlers(pipeline::addLast);
@@ -141,6 +143,8 @@ public abstract class BasePipelineFactory extends ChannelInitializer<Channel> {
                 EngineHoursHandler.class,
                 ComputedAttributesHandler.class,
                 PositionForwardingHandler.class,
+                //<insert data handler here,> (TotalDistanceCorrectionHandler.class)
+                TotalDistanceCorrectionHandler.class,
                 DefaultDataHandler.class,
                 MediaEventHandler.class,
                 CommandResultEventHandler.class,
