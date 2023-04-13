@@ -37,9 +37,8 @@ public class TotalDistanceCorrectionHandler extends BaseDataHandler {
     @Override
     protected Position handlePosition(Position position) {
 
-
-
-        System.out.println("=====================================> checking this:    " + position.getFixTime()  + "  " + position.getDouble( Position.KEY_TOTAL_DISTANCE) );
+        System.out.println("=====================================> checking this:    " + position.getFixTime() + "  "
+                + position.getDouble(Position.KEY_TOTAL_DISTANCE));
 
         // 1, 4, 5, 2, 3
         // when a new position arrives - 2
@@ -55,45 +54,57 @@ public class TotalDistanceCorrectionHandler extends BaseDataHandler {
 
         List<Position> positionsToUpdate = new ArrayList<>();
         Position lastGoodPosition = null;
+        int lastGoodIndex = -1;
         for (int i = lastList.size() - 1; i >= 0; i--) {
             /// if the position is greater than the current position mark them for update.
-            if (lastList.get(i).getFixTime().after(position.getFixTime()) || lastList.get(i).getFixTime().equals(position.getFixTime())) {
+            if (lastList.get(i).getFixTime().after(position.getFixTime())
+                    || lastList.get(i).getFixTime().equals(position.getFixTime())) {
 
-                System.out.println(lastList.get(i).getFixTime() + ", " + lastList.get(i).getDouble(Position.KEY_TOTAL_DISTANCE )  +  "  is after the time of  current " + position.getFixTime() + "  " + position.getDouble(Position.KEY_TOTAL_DISTANCE)  );
+                System.out.println(lastList.get(i).getFixTime() + ", "
+                        + lastList.get(i).getDouble(Position.KEY_TOTAL_DISTANCE) + "  is after the time of  current "
+                        + position.getFixTime() + "  " + position.getDouble(Position.KEY_TOTAL_DISTANCE));
 
                 positionsToUpdate.add(lastList.get(i));
             } else {
                 lastGoodPosition = lastList.get(i);
-                System.out.println(" last good position found is: " + lastList.get(i).getFixTime() + ", " + lastList.get(i).getDouble(Position.KEY_TOTAL_DISTANCE )  );
+                lastGoodIndex = i;
+                System.out.println(" last good position found is: " + lastList.get(i).getFixTime() + ", "
+                        + lastList.get(i).getDouble(Position.KEY_TOTAL_DISTANCE));
                 break;
             }
         }
-        
+
         System.out.println(" number of items to be updated: " + positionsToUpdate.size());
         if (positionsToUpdate.size() > 0) {
-            if(lastGoodPosition == null)
-            {
+            if (lastGoodPosition == null || lastGoodIndex == -1) {
                 System.out.println(" last good position is null");
                 return position;
             }
+
             // lastGoodPosition = positionsToUpdate.get(positionsToUpdate.size() - 1);
-            
+
             position.set(Position.KEY_TOTAL_DISTANCE, position.getDouble(Position.KEY_DISTANCE)
-            + lastGoodPosition.getDouble(Position.KEY_TOTAL_DISTANCE));
+                    + lastGoodPosition.getDouble(Position.KEY_TOTAL_DISTANCE));
             double totalDistance = lastGoodPosition.getDouble(Position.KEY_TOTAL_DISTANCE);
             System.out.print(" $$$$$$$$$$   last good position: " + totalDistance);
             for (int i = positionsToUpdate.size() - 1; i >= 0; i--) {
                 totalDistance += positionsToUpdate.get(i).getDouble(Position.KEY_DISTANCE);
                 positionsToUpdate.get(i).set(Position.KEY_TOTAL_DISTANCE, totalDistance);
             }
+
             try {
                 // storage.addObjects(positionsToUpdate, new Request(new Columns.All()));
                 storage.updatePositions(positionsToUpdate, new Request(new Columns.All()));
+
+                for (int x = lastGoodIndex; x < positionsToUpdate.size(); x++) {
+                    lastList.set(x, positionsToUpdate.get(x));
+                }
+                cacheManager.updatePositionInList(lastList, lastGoodPosition.getDeviceId());
+
             } catch (StorageException e) {
                 e.printStackTrace();
                 return null;
-            } 
-            catch (SQLException e) {
+            } catch (SQLException e) {
                 e.printStackTrace();
                 return null;
             }

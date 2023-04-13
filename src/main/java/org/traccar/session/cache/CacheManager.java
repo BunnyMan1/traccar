@@ -211,6 +211,8 @@ public class CacheManager implements BroadcastInterface {
     }
 
     private void updatePositionInList(Position position) {
+        if(position == null)
+            return;
         var list = devicePositionsList.computeIfAbsent(position.getDeviceId(), k -> new ArrayList<>());
 
         // System.out.println(
@@ -228,7 +230,7 @@ public class CacheManager implements BroadcastInterface {
         //             "updatePositionInList (" + k.getKey() + ") - list size: " + k.getValue().size());
     }
 
-    private void updatePositionInList(List<Position> positions, Long deviceId) {
+    public void updatePositionInList(List<Position> positions, Long deviceId) {
         var list = devicePositionsList.computeIfAbsent(deviceId, k -> new ArrayList<>());
 
         list.addAll(positions);
