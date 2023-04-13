@@ -217,6 +217,10 @@ public class DatabaseStorage extends Storage {
 
         } catch (SQLException e) {
             throw new StorageException(e);
+        } finally {
+            ps.close();
+            connection.close();
+
         }
     }
     // FIRST TRY

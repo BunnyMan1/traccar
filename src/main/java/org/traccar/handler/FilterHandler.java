@@ -114,7 +114,7 @@ public class FilterHandler extends BaseDataHandler {
             for (String key : position.getAttributes().keySet()) {
 
                 if (key.equals("archive"))
-                    continue;
+                    return true;
                 if (key.equals("hours"))
                     continue;
 
