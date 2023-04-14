@@ -237,6 +237,9 @@ public class CacheManager implements BroadcastInterface {
     // }
 
     private void updatePositionInList(Position position) {
+        if (position == null) {
+            return;
+        }
         var list = devicePositionsList.computeIfAbsent(position.getDeviceId(), k -> new ArrayList<>());
 
         var index = 0;

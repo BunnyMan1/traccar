@@ -1,5 +1,7 @@
 package org.traccar.handler;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -42,7 +44,7 @@ public class TotalDistanceCorrectionHandler extends BaseDataHandler {
         List<Position> greaterFixTimePositions = new ArrayList<>();
 
         for (Position p : existingPositions) {
-            if (lowerClosestPosition == null || lowerClosestPosition.getFixTime().before(p.getFixTime()))
+            if (lowerClosestPosition == null || p.getFixTime().before(position.getFixTime()))
                 lowerClosestPosition = p;
 
             if (p.getFixTime().after(position.getFixTime())) {
@@ -56,12 +58,14 @@ public class TotalDistanceCorrectionHandler extends BaseDataHandler {
         // rectify totalDistance of all positions with greater fixTime
         double totalDistance = lowerClosestPosition.getDouble(Position.KEY_TOTAL_DISTANCE);
 
-        totalDistance += position.getDouble(Position.KEY_DISTANCE);
+        totalDistance = BigDecimal.valueOf(totalDistance + position.getDouble(Position.KEY_DISTANCE))
+                .setScale(2, RoundingMode.HALF_EVEN).doubleValue();
 
         position.set(Position.KEY_TOTAL_DISTANCE, totalDistance);
 
         for (Position p : greaterFixTimePositions) {
-            totalDistance += p.getDouble(Position.KEY_DISTANCE);
+            totalDistance = BigDecimal.valueOf(totalDistance + p.getDouble(Position.KEY_DISTANCE))
+            .setScale(2, RoundingMode.HALF_EVEN).doubleValue();
             p.set(Position.KEY_TOTAL_DISTANCE, totalDistance);
         }
 
