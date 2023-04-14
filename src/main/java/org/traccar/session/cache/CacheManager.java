@@ -210,26 +210,59 @@ public class CacheManager implements BroadcastInterface {
         }
     }
 
+    // private void updatePositionInList(Position position) {
+    // var list = devicePositionsList.computeIfAbsent(position.getDeviceId(), k ->
+    // new ArrayList<>());
+
+    // list.add(position);
+
+    // if (list.size() > maxPositionsListSize)
+    // list.remove(0);
+
+    // }
+
+    // private void updatePositionInList(List<Position> positions, Long deviceId) {
+    // var list = devicePositionsList.computeIfAbsent(deviceId, k -> new
+    // ArrayList<>());
+
+    // list.addAll(positions);
+
+    // var extraLength = list.size() - maxPositionsListSize;
+    // if (extraLength > 0) {
+    // for (int i = 0; i < extraLength; i++) {
+    // list.remove(i); // Remove extra elements from left side of the list i.e.
+    // starting at 0.
+    // }
+    // }
+    // }
+
     private void updatePositionInList(Position position) {
+        if (position == null) {
+            return;
+        }
         var list = devicePositionsList.computeIfAbsent(position.getDeviceId(), k -> new ArrayList<>());
 
-        // System.out.println(
-        //         "updatePositionInList (" + position.getDeviceId() + ") - Before add list size: " + list.size());
-
-        list.add(position);
-        // System.out.println("Added position with lat long: " + position.getLatitude() + " " + position.getLongitude()
-        //         + " time: " + position.getFixTime().toString());
+        var index = 0;
+        for (var p : list) {
+            if (p.getFixTime().after(position.getFixTime())) {
+                break;
+            }
+            index++;
+        }
+        list.add(index, position);
 
         if (list.size() > maxPositionsListSize)
             list.remove(0);
-
-        // for (var k : devicePositionsList.entrySet())
-        //     System.out.println(
-        //             "updatePositionInList (" + k.getKey() + ") - list size: " + k.getValue().size());
     }
 
-    private void updatePositionInList(List<Position> positions, Long deviceId) {
-        var list = devicePositionsList.computeIfAbsent(deviceId, k -> new ArrayList<>());
+    private void updatePositionInListWhenExistingEmpty(List<Position> positions, Long deviceId) {
+
+        var existing = devicePositionsList.get(deviceId);
+        if (existing != null) {
+            throw new RuntimeException("Existing positions list is not empty");
+        }
+
+        var list = new ArrayList<Position>();
 
         list.addAll(positions);
 
@@ -239,15 +272,49 @@ public class CacheManager implements BroadcastInterface {
                 list.remove(i); // Remove extra elements from left side of the list i.e. starting at 0.
             }
         }
+
+        devicePositionsList.put(deviceId, list);
     }
 
     public void updatePosition(Position position) {
         try {
             lock.writeLock().lock();
             if (deviceLinks.containsKey(position.getDeviceId())) {
+                var existing = devicePositions.get(position.getDeviceId());
+
+                if (existing != null && existing.getFixTime().after(position.getFixTime())) {
+                    return;
+                }
+
                 devicePositions.put(position.getDeviceId(), position);
                 updatePositionInList(position);
             }
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+
+    /// Method to update devicePositionsList with new positions for given deviceId.
+    public void updatePosition(List<Position> positions, Long deviceId) {
+        try {
+            lock.writeLock().lock();
+
+            var list = devicePositionsList.get(deviceId);
+
+            // replace last postitons.size() items in list with positions
+            var index = list.size() - positions.size();
+            for (var position : positions) {
+                list.set(index, position);
+                index++;
+            }
+            var extraLength = list.size() - maxPositionsListSize;
+            if (extraLength > 0) {
+                for (int i = 0; i < extraLength; i++) {
+                    list.remove(i); // Remove extra elements from left side of the list i.e. starting at 0.
+                }
+            }
+            devicePositionsList.put(deviceId, list);
+
         } finally {
             lock.writeLock().unlock();
         }
@@ -427,7 +494,7 @@ public class CacheManager implements BroadcastInterface {
                 // DB fetches in descending order i.e. latest is on the left end of the list
                 // (index 0).
                 Collections.reverse(positions);
-                updatePositionInList(positions, deviceId);
+                updatePositionInListWhenExistingEmpty(positions, deviceId);
 
                 if (position == null) {
                     position = storage.getObject(Position.class, new Request(

@@ -106,6 +106,9 @@ public class FilterHandler extends BaseDataHandler {
     private boolean filterDuplicate(Position position, Position last) {
         if (filterDuplicate && last != null && position.getFixTime().equals(last.getFixTime())) {
             for (String key : position.getAttributes().keySet()) {
+                // ignore "archive" and "hours" attributes
+                if (key.equals(Position.KEY_ARCHIVE) || key.equals(Position.KEY_HOURS))
+                    continue;
                 if (!last.hasAttribute(key)) {
                     return false;
                 }
@@ -172,28 +175,30 @@ public class FilterHandler extends BaseDataHandler {
         return false;
     }
 
-    // private boolean filterMaxSpeedFromList(Position position, List<Position> lastItems) {
-    //     if (lastItems == null)
-    //         return false;
-    //     for (Position p : lastItems) {
-    //         var res = filterMaxSpeed(position, p);
-    //         if (res) {
-    //             System.out.println("Sending true in filterMaxSpeedFromList.");
-    //             return true;
-    //         }
-    //     }
-    //     return false;
+    // private boolean filterMaxSpeedFromList(Position position, List<Position>
+    // lastItems) {
+    // if (lastItems == null)
+    // return false;
+    // for (Position p : lastItems) {
+    // var res = filterMaxSpeed(position, p);
+    // if (res) {
+    // System.out.println("Sending true in filterMaxSpeedFromList.");
+    // return true;
+    // }
+    // }
+    // return false;
     // }
 
-    // private boolean filterMinPeriodFromList(Position position, List<Position> lastItems) {
-    //     if (lastItems == null)
-    //         return false;
-    //     for (Position p : lastItems) {
-    //         var res = filterMinPeriod(position, p);
-    //         if (res)
-    //             return true;
-    //     }
-    //     return false;
+    // private boolean filterMinPeriodFromList(Position position, List<Position>
+    // lastItems) {
+    // if (lastItems == null)
+    // return false;
+    // for (Position p : lastItems) {
+    // var res = filterMinPeriod(position, p);
+    // if (res)
+    // return true;
+    // }
+    // return false;
     // }
 
     private boolean skipLimit(Position position, Position last) {

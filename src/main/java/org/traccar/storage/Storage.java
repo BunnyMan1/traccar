@@ -29,6 +29,8 @@ public abstract class Storage {
 
     public abstract <T> void updateObject(T entity, Request request) throws StorageException;
 
+    public abstract <T> void updateObjects(List<T> entities, Request request) throws StorageException;
+
     public abstract void removeObject(Class<?> clazz, Request request) throws StorageException;
 
     public abstract List<Permission> getPermissions(
