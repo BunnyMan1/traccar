@@ -143,7 +143,7 @@ public abstract class BasePipelineFactory extends ChannelInitializer<Channel> {
                 ComputedAttributesHandler.class,
                 PositionForwardingHandler.class,
                 // Handler that will correct any inconsitencies in the total distance
-                TotalDistanceCorrectionHandler.class,
+                // TotalDistanceCorrectionHandler.class,
                 DefaultDataHandler.class,
                 MediaEventHandler.class,
                 CommandResultEventHandler.class,
