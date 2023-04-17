@@ -83,6 +83,22 @@ public class MainEventHandler extends ChannelInboundHandlerAdapter {
             Position position = (Position) msg;
             Device device = cacheManager.getObject(Device.class, position.getDeviceId());
 
+            if (!position.hasAttribute(Position.KEY_HOURS)) {
+                LOGGER.warn("Position has no hours attribute. Device Id: " + position.getDeviceId()
+                        + ", Newly Inserting Position Id: " + position.getId());
+
+                LOGGER.warn("Device's latest position id: " + device.getPositionId());
+
+                Position cachePresentLatestPosition = cacheManager.getPosition(device.getId());
+
+                if (cachePresentLatestPosition != null) {
+                    LOGGER.warn("Cache present latest position item id for this device: "
+                            + cachePresentLatestPosition.getId());
+                } else {
+                    LOGGER.warn("No cache present latest position item for this device id: " + device.getId());
+                }
+            }
+
             try {
                 if (PositionUtil.isLatest(cacheManager, position)) {
                     Device updatedDevice = new Device();
@@ -94,6 +110,9 @@ public class MainEventHandler extends ChannelInboundHandlerAdapter {
 
                     cacheManager.updatePosition(position);
                     connectionManager.updatePosition(true, position);
+                } else {
+                    LOGGER.warn("Position is not latest. Not setting for device. Device Id: " + position.getDeviceId()
+                            + ", Newly Inserted Position Id: " + position.getId());
                 }
             } catch (StorageException error) {
                 LOGGER.warn("Failed to update device", error);

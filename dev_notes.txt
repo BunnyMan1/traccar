@@ -41,6 +41,7 @@ Check server logs:
 Check traccar service logs:
 - sudo journalctl -u traccar.service --since "2022-07-11" --no-pager
 - sudo journalctl -u traccar.service -f --since "1 hour ago"
+- sudo journalctl -u traccar.service --since "2023-04-15 02:28:00" --until "2023-04-15 02:30:00" --no-pager
 
 Sync Tags from Upstream/master:
 - https://stackoverflow.com/questions/70678073/how-do-i-sync-tags-to-a-forked-github-repo

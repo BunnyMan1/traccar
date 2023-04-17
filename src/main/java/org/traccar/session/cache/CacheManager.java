@@ -131,19 +131,30 @@ public class CacheManager implements BroadcastInterface {
 
     public Position getPosition(long deviceId) {
         try {
-            lock.readLock().lock();
-            return devicePositions.get(deviceId);
-        } finally {
-            lock.readLock().unlock();
+            try {
+                lock.readLock().lock();
+                return devicePositions.get(deviceId);
+            } finally {
+                lock.readLock().unlock();
+            }
+        } catch (Exception e) {
+            LOGGER.warn("Error getting position for deviceId: " + deviceId + " " + e.getMessage());
+            throw new RuntimeException(e);
         }
     }
 
     public List<Position> getPositionsList(long deviceId) {
         try {
-            lock.readLock().lock();
-            return devicePositionsList.get(deviceId);
-        } finally {
-            lock.readLock().unlock();
+
+            try {
+                lock.readLock().lock();
+                return devicePositionsList.get(deviceId);
+            } finally {
+                lock.readLock().unlock();
+            }
+        } catch (Exception e) {
+            LOGGER.warn("Error getting positions list for deviceId: " + deviceId + " " + e.getMessage());
+            throw new RuntimeException(e);
         }
     }
 
@@ -240,83 +251,104 @@ public class CacheManager implements BroadcastInterface {
         if (position == null) {
             return;
         }
-        var list = devicePositionsList.computeIfAbsent(position.getDeviceId(), k -> new ArrayList<>());
 
-        var index = 0;
-        for (var p : list) {
-            if (p.getFixTime().after(position.getFixTime())) {
-                break;
+        try {
+            var list = devicePositionsList.computeIfAbsent(position.getDeviceId(), k -> new ArrayList<>());
+
+            var index = 0;
+            for (var p : list) {
+                if (p.getFixTime().after(position.getFixTime())) {
+                    break;
+                }
+                index++;
             }
-            index++;
-        }
-        list.add(index, position);
+            list.add(index, position);
 
-        if (list.size() > maxPositionsListSize)
-            list.remove(0);
+            if (list.size() > maxPositionsListSize)
+                list.remove(0);
+        } catch (Exception e) {
+            LOGGER.warn("Error updatePositionInList for deviceId: " + position.getDeviceId() + " " + e.getMessage());
+            throw new RuntimeException(e);
+        }
     }
 
     private void updatePositionInListWhenExistingEmpty(List<Position> positions, Long deviceId) {
-
         var existing = devicePositionsList.get(deviceId);
         if (existing != null) {
             throw new RuntimeException("Existing positions list is not empty");
         }
 
-        var list = new ArrayList<Position>();
-
-        list.addAll(positions);
-
-        var extraLength = list.size() - maxPositionsListSize;
-        if (extraLength > 0) {
-            for (int i = 0; i < extraLength; i++) {
-                list.remove(i); // Remove extra elements from left side of the list i.e. starting at 0.
-            }
-        }
-
-        devicePositionsList.put(deviceId, list);
-    }
-
-    public void updatePosition(Position position) {
         try {
-            lock.writeLock().lock();
-            if (deviceLinks.containsKey(position.getDeviceId())) {
-                var existing = devicePositions.get(position.getDeviceId());
 
-                if (existing != null && existing.getFixTime().after(position.getFixTime())) {
-                    return;
-                }
+            var list = new ArrayList<Position>();
 
-                devicePositions.put(position.getDeviceId(), position);
-                updatePositionInList(position);
-            }
-        } finally {
-            lock.writeLock().unlock();
-        }
-    }
+            list.addAll(positions);
 
-    /// Method to update devicePositionsList with new positions for given deviceId.
-    public void updatePosition(List<Position> positions, Long deviceId) {
-        try {
-            lock.writeLock().lock();
-
-            var list = devicePositionsList.get(deviceId);
-
-            // replace last postitons.size() items in list with positions
-            var index = list.size() - positions.size();
-            for (var position : positions) {
-                list.set(index, position);
-                index++;
-            }
             var extraLength = list.size() - maxPositionsListSize;
             if (extraLength > 0) {
                 for (int i = 0; i < extraLength; i++) {
                     list.remove(i); // Remove extra elements from left side of the list i.e. starting at 0.
                 }
             }
-            devicePositionsList.put(deviceId, list);
 
-        } finally {
-            lock.writeLock().unlock();
+            devicePositionsList.put(deviceId, list);
+        } catch (Exception e) {
+            LOGGER.warn("Error updatePositionInListWhenExistingEmpty for deviceId: " + deviceId + " " + e.getMessage());
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void updatePosition(Position position) {
+        try {
+            try {
+                lock.writeLock().lock();
+                if (deviceLinks.containsKey(position.getDeviceId())) {
+                    var existing = devicePositions.get(position.getDeviceId());
+
+                    if (existing != null && existing.getFixTime().after(position.getFixTime())) {
+                        return;
+                    }
+
+                    devicePositions.put(position.getDeviceId(), position);
+                    updatePositionInList(position);
+                }
+            } finally {
+                lock.writeLock().unlock();
+            }
+        } catch (Exception e) {
+            LOGGER.warn("Error updating position for deviceId: " + position.getDeviceId() + " " + e.getMessage());
+            throw new RuntimeException(e);
+        }
+    }
+
+    /// Method to update devicePositionsList with new positions for given deviceId.
+    public void updatePosition(List<Position> positions, Long deviceId) {
+        try {
+            try {
+                lock.writeLock().lock();
+
+                var list = devicePositionsList.get(deviceId);
+
+                // replace last postitons.size() items in list with positions
+                var index = list.size() - positions.size();
+                for (var position : positions) {
+                    list.set(index, position);
+                    index++;
+                }
+                var extraLength = list.size() - maxPositionsListSize;
+                if (extraLength > 0) {
+                    for (int i = 0; i < extraLength; i++) {
+                        list.remove(i); // Remove extra elements from left side of the list i.e. starting at 0.
+                    }
+                }
+                devicePositionsList.put(deviceId, list);
+
+            } finally {
+                lock.writeLock().unlock();
+            }
+        } catch (Exception e) {
+            LOGGER.warn("Error updatePosition for deviceId: " + deviceId + " " + e.getMessage());
+            throw new RuntimeException(e);
         }
     }
 

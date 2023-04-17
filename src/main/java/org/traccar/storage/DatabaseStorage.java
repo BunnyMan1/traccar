@@ -422,16 +422,16 @@ public class DatabaseStorage extends Storage {
 
         // Currently support is only for updating positions
         if (entities.get(0) instanceof Position) {
-            System.out.println(" to updateObjects " + entities.size());
+            System.out.println(" to updateObjects " + entities.size() + " of deviceid:" + ((Position) entities.get(0)).getDeviceId());
             if (entities.isEmpty()) {
                 return;
             }
             List<String> columns = Arrays.asList(
                     "address", "protocol", "valid", "longitude", "latitude", "network", "deviceTime", "accuracy",
                     "serverTime", "fixTime", "altitude", "speed", "course", "deviceId", "attributes", "id");
-            System.out.println(" columns " + columns);
+            // System.out.println(" columns " + columns);
             var classname = getStorageName(entities.get(0).getClass());
-            System.out.println(" classname " + classname);
+            // System.out.println(" classname " + classname);
             StringBuilder query = new StringBuilder(
                     "INSERT INTO " + classname + " (" + formatColumns(columns, c -> c) + " ) VALUES ");
 
@@ -449,9 +449,9 @@ public class DatabaseStorage extends Storage {
                     query.append(", ");
             }
 
-            query.append("ON DUPLICATE KEY UPDATE attributes = VALUES(attributes)");
+            // query.append("ON DUPLICATE KEY UPDATE attributes = VALUES(attributes)");
 
-            System.out.println(" query " + query.toString());
+            // System.out.println(" query " + query.toString());
             Connection connection = null;
             PreparedStatement ps = null;
 
