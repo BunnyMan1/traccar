@@ -306,13 +306,13 @@ public class Position extends Message {
         this.network = network;
     }
 
-    private double distance;
+    private Double distance;
 
-    public double getDistance() {
+    public Double getDistance() {
         return distance;
     }
 
-    public void setDistance(double distance) {
+    public void setDistance(Double distance) {
         this.distance = distance;
     }
 
