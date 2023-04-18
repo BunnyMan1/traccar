@@ -38,13 +38,10 @@ import org.traccar.storage.Storage;
 import org.traccar.storage.StorageException;
 import org.traccar.storage.query.Columns;
 import org.traccar.storage.query.Condition;
-import org.traccar.storage.query.Order;
 import org.traccar.storage.query.Request;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
-
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -78,8 +75,6 @@ public class CacheManager implements BroadcastInterface {
     private final Map<Long, Integer> deviceReferences = new HashMap<>();
     private final Map<Long, Map<Class<? extends BaseModel>, Set<Long>>> deviceLinks = new HashMap<>();
     private final Map<Long, Position> devicePositions = new HashMap<>();
-    private final Map<Long, List<Position>> devicePositionsList = new HashMap<>();
-    private final int maxPositionsListSize = 200;
 
     private Server server;
     private final Map<Long, List<User>> notificationUsers = new HashMap<>();
@@ -131,30 +126,10 @@ public class CacheManager implements BroadcastInterface {
 
     public Position getPosition(long deviceId) {
         try {
-            try {
-                lock.readLock().lock();
-                return devicePositions.get(deviceId);
-            } finally {
-                lock.readLock().unlock();
-            }
-        } catch (Exception e) {
-            LOGGER.warn("Error getting position for deviceId: " + deviceId + " " + e.getMessage());
-            throw new RuntimeException(e);
-        }
-    }
-
-    public List<Position> getPositionsList(long deviceId) {
-        try {
-
-            try {
-                lock.readLock().lock();
-                return devicePositionsList.get(deviceId);
-            } finally {
-                lock.readLock().unlock();
-            }
-        } catch (Exception e) {
-            LOGGER.warn("Error getting positions list for deviceId: " + deviceId + " " + e.getMessage());
-            throw new RuntimeException(e);
+            lock.readLock().lock();
+            return devicePositions.get(deviceId);
+        } finally {
+            lock.readLock().unlock();
         }
     }
 
@@ -221,134 +196,14 @@ public class CacheManager implements BroadcastInterface {
         }
     }
 
-    // private void updatePositionInList(Position position) {
-    // var list = devicePositionsList.computeIfAbsent(position.getDeviceId(), k ->
-    // new ArrayList<>());
-
-    // list.add(position);
-
-    // if (list.size() > maxPositionsListSize)
-    // list.remove(0);
-
-    // }
-
-    // private void updatePositionInList(List<Position> positions, Long deviceId) {
-    // var list = devicePositionsList.computeIfAbsent(deviceId, k -> new
-    // ArrayList<>());
-
-    // list.addAll(positions);
-
-    // var extraLength = list.size() - maxPositionsListSize;
-    // if (extraLength > 0) {
-    // for (int i = 0; i < extraLength; i++) {
-    // list.remove(i); // Remove extra elements from left side of the list i.e.
-    // starting at 0.
-    // }
-    // }
-    // }
-
-    private void updatePositionInList(Position position) {
-        if (position == null) {
-            return;
-        }
-
-        try {
-            var list = devicePositionsList.computeIfAbsent(position.getDeviceId(), k -> new ArrayList<>());
-
-            var index = 0;
-            for (var p : list) {
-                if (p.getFixTime().after(position.getFixTime())) {
-                    break;
-                }
-                index++;
-            }
-            list.add(index, position);
-
-            if (list.size() > maxPositionsListSize)
-                list.remove(0);
-        } catch (Exception e) {
-            LOGGER.warn("Error updatePositionInList for deviceId: " + position.getDeviceId() + " " + e.getMessage());
-            throw new RuntimeException(e);
-        }
-    }
-
-    private void updatePositionInListWhenExistingEmpty(List<Position> positions, Long deviceId) {
-        var existing = devicePositionsList.get(deviceId);
-        if (existing != null) {
-            throw new RuntimeException("Existing positions list is not empty");
-        }
-
-        try {
-
-            var list = new ArrayList<Position>();
-
-            list.addAll(positions);
-
-            var extraLength = list.size() - maxPositionsListSize;
-            if (extraLength > 0) {
-                for (int i = 0; i < extraLength; i++) {
-                    list.remove(i); // Remove extra elements from left side of the list i.e. starting at 0.
-                }
-            }
-
-            devicePositionsList.put(deviceId, list);
-        } catch (Exception e) {
-            LOGGER.warn("Error updatePositionInListWhenExistingEmpty for deviceId: " + deviceId + " " + e.getMessage());
-            throw new RuntimeException(e);
-        }
-    }
-
     public void updatePosition(Position position) {
         try {
-            try {
-                lock.writeLock().lock();
-                if (deviceLinks.containsKey(position.getDeviceId())) {
-                    var existing = devicePositions.get(position.getDeviceId());
-
-                    if (existing != null && existing.getFixTime().after(position.getFixTime())) {
-                        return;
-                    }
-
-                    devicePositions.put(position.getDeviceId(), position);
-                    updatePositionInList(position);
-                }
-            } finally {
-                lock.writeLock().unlock();
+            lock.writeLock().lock();
+            if (deviceLinks.containsKey(position.getDeviceId())) {
+                devicePositions.put(position.getDeviceId(), position);
             }
-        } catch (Exception e) {
-            LOGGER.warn("Error updating position for deviceId: " + position.getDeviceId() + " " + e.getMessage());
-            throw new RuntimeException(e);
-        }
-    }
-
-    /// Method to update devicePositionsList with new positions for given deviceId.
-    public void updatePosition(List<Position> positions, Long deviceId) {
-        try {
-            try {
-                lock.writeLock().lock();
-
-                var list = devicePositionsList.get(deviceId);
-
-                // replace last postitons.size() items in list with positions
-                var index = list.size() - positions.size();
-                for (var position : positions) {
-                    list.set(index, position);
-                    index++;
-                }
-                var extraLength = list.size() - maxPositionsListSize;
-                if (extraLength > 0) {
-                    for (int i = 0; i < extraLength; i++) {
-                        list.remove(i); // Remove extra elements from left side of the list i.e. starting at 0.
-                    }
-                }
-                devicePositionsList.put(deviceId, list);
-
-            } finally {
-                lock.writeLock().unlock();
-            }
-        } catch (Exception e) {
-            LOGGER.warn("Error updatePosition for deviceId: " + deviceId + " " + e.getMessage());
-            throw new RuntimeException(e);
+        } finally {
+            lock.writeLock().unlock();
         }
     }
 
@@ -511,31 +366,8 @@ public class CacheManager implements BroadcastInterface {
             deviceLinks.put(deviceId, links);
 
             if (device.getPositionId() > 0) {
-                // var position = storage.getObject(Position.class, new Request(
-                // new Columns.All(), new Condition.Equals("id", device.getPositionId())));
-
-                var positions = storage.getObjects(Position.class, new Request(
-                        new Columns.All(),
-                        new Condition.Equals("deviceId", deviceId),
-                        new Order("fixTime", true, maxPositionsListSize)));
-
-                var position = positions.stream().filter(p -> p.getId() == device.getPositionId()).findFirst()
-                        .orElseGet(() -> null);
-
-                // Reversing as latest position must be towards the right end of the list.
-                // DB fetches in descending order i.e. latest is on the left end of the list
-                // (index 0).
-                Collections.reverse(positions);
-                updatePositionInListWhenExistingEmpty(positions, deviceId);
-
-                if (position == null) {
-                    position = storage.getObject(Position.class, new Request(
-                            new Columns.All(), new Condition.Equals("id", device.getPositionId())));
-
-                    updatePositionInList(position);
-                }
-
-                devicePositions.put(deviceId, position);
+                devicePositions.put(deviceId, storage.getObject(Position.class, new Request(
+                        new Columns.All(), new Condition.Equals("id", device.getPositionId()))));
             }
         }
     }
@@ -550,7 +382,6 @@ public class CacheManager implements BroadcastInterface {
             });
         }));
         devicePositions.remove(deviceId);
-        devicePositionsList.remove(deviceId);
     }
 
     private void invalidate(CacheKey... keys) throws StorageException {

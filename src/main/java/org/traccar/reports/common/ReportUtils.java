@@ -219,10 +219,13 @@ public class ReportUtils {
             if (speed > speedMax) {
                 speedMax = speed;
             }
-            try {
-                totalDistance += positions.get(i).getDistance();
-            } catch (Exception e) {
-                totalDistanceValid = false;
+            
+            if (totalDistanceValid) {
+                try {
+                    totalDistance += positions.get(i).getDistance();
+                } catch (Exception e) {
+                    totalDistanceValid = false;
+                }
             }
         }
 
