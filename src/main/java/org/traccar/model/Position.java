@@ -306,6 +306,16 @@ public class Position extends Message {
         this.network = network;
     }
 
+    private double distance;
+
+    public double getDistance() {
+        return distance;
+    }
+
+    public void setDistance(double distance) {
+        this.distance = distance;
+    }
+
     @JsonIgnore
     @QueryIgnore
     @Override

@@ -83,6 +83,11 @@ public class MainEventHandler extends ChannelInboundHandlerAdapter {
             Position position = (Position) msg;
             Device device = cacheManager.getObject(Device.class, position.getDeviceId());
 
+            if (device == null) {
+                LOGGER.warn("Device not found in cache: " + position.getDeviceId());
+                return;
+            }
+
             if (!position.hasAttribute(Position.KEY_HOURS)) {
                 LOGGER.warn("Position has no hours attribute. Device Id: " + position.getDeviceId()
                         + ", Newly Inserting Position Id: " + position.getId());
