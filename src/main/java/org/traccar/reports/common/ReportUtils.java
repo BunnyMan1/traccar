@@ -212,11 +212,13 @@ public class ReportUtils {
         Position endTrip = positions.get(endIndex);
 
         double speedMax = 0;
+        double totalDistance = 0.0;
         for (int i = startIndex; i <= endIndex; i++) {
             double speed = positions.get(i).getSpeed();
             if (speed > speedMax) {
                 speedMax = speed;
             }
+            totalDistance += positions.get(i).getDistance();
         }
 
         TripReportItem trip = new TripReportItem();
@@ -246,7 +248,8 @@ public class ReportUtils {
         }
         trip.setEndAddress(endAddress);
 
-        trip.setDistance(PositionUtil.calculateDistance(startTrip, endTrip, !ignoreOdometer));
+        // trip.setDistance(PositionUtil.calculateDistance(startTrip, endTrip, !ignoreOdometer));
+        trip.setDistance(totalDistance);
         trip.setDuration(tripDuration);
         if (tripDuration > 0) {
             trip.setAverageSpeed(UnitsConverter.knotsFromMps(trip.getDistance() * 1000 / tripDuration));
