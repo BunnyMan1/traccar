@@ -62,6 +62,8 @@ public class SummaryReportProvider {
         SummaryReportItem result = new SummaryReportItem();
         result.setDeviceId(device.getId());
         result.setDeviceName(device.getName());
+        var totalDistance = 0.0;
+        var totalDistanceValid = true;
         if (positions != null && !positions.isEmpty()) {
             Position firstPosition = null;
             Position previousPosition = null;
@@ -73,19 +75,30 @@ public class SummaryReportProvider {
                 if (position.getSpeed() > result.getMaxSpeed()) {
                     result.setMaxSpeed(position.getSpeed());
                 }
+
+                if (totalDistanceValid) {
+                    try {
+                        totalDistance += position.getDistance();
+                    } catch (Exception e) {
+                        totalDistanceValid = false;
+                    }
+                }
             }
             boolean ignoreOdometer = config.getBoolean(Keys.REPORT_IGNORE_ODOMETER);
-            result.setDistance(PositionUtil.calculateDistance(firstPosition, previousPosition, !ignoreOdometer));
+            if (totalDistanceValid) {
+                result.setDistance(totalDistance);
+            } else {
+                result.setDistance(PositionUtil.calculateDistance(firstPosition, previousPosition, !ignoreOdometer));
+            }
             result.setSpentFuel(reportUtils.calculateFuel(firstPosition, previousPosition));
 
             long durationMilliseconds;
             if (firstPosition.hasAttribute(Position.KEY_HOURS) && previousPosition.hasAttribute(Position.KEY_HOURS)) {
-                durationMilliseconds =
-                        previousPosition.getLong(Position.KEY_HOURS) - firstPosition.getLong(Position.KEY_HOURS);
+                durationMilliseconds = previousPosition.getLong(Position.KEY_HOURS)
+                        - firstPosition.getLong(Position.KEY_HOURS);
                 result.setEngineHours(durationMilliseconds);
             } else {
-                durationMilliseconds =
-                        previousPosition.getFixTime().getTime() - firstPosition.getFixTime().getTime();
+                durationMilliseconds = previousPosition.getFixTime().getTime() - firstPosition.getFixTime().getTime();
             }
 
             if (durationMilliseconds > 0) {
@@ -146,7 +159,7 @@ public class SummaryReportProvider {
         reportUtils.checkPeriodLimit(from, to);
 
         ArrayList<SummaryReportItem> result = new ArrayList<>();
-        for (Device device: reportUtils.getAccessibleDevices(userId, deviceIds, groupIds)) {
+        for (Device device : reportUtils.getAccessibleDevices(userId, deviceIds, groupIds)) {
             Collection<SummaryReportItem> deviceResults = calculateSummaryResults(userId, device, from, to, daily);
             for (SummaryReportItem summaryReport : deviceResults) {
                 if (summaryReport.getStartTime() != null && summaryReport.getEndTime() != null) {

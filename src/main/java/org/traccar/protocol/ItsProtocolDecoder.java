@@ -277,7 +277,9 @@ public class ItsProtocolDecoder extends BaseProtocolDecoder {
         if (parser.hasNext(3)) {
             position.set(Position.PREFIX_ADC + 1, parser.nextDouble()); // adc1 / Analog Input 1
             position.set(Position.PREFIX_ADC + 2, parser.nextDouble()); // adc2 / Analog Input 2
-            position.set(Position.KEY_DISTANCE, parser.nextDouble()); // - / Delta Distance (ADDED ON TOP OF TRACCAR'S DEFAULT ITS DECODER)
+            var distValue = parser.nextDouble();
+            position.set(Position.KEY_DISTANCE, distValue); // - / Delta Distance (ADDED ON TOP OF TRACCAR'S DEFAULT ITS DECODER)
+            position.setDistance(distValue);
         }
 
         if (parser.hasNext(5)) {

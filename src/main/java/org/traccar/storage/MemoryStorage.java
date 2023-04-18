@@ -76,10 +76,4 @@ public class MemoryStorage extends Storage {
                 .remove(new Pair<>(permission.getOwnerId(), permission.getPropertyId()));
     }
 
-    @Override
-    public <T> void updateObjects(List<T> entities, Request request) throws StorageException {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'updatePositions'");
-    }
-
 }

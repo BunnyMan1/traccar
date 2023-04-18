@@ -212,10 +212,20 @@ public class ReportUtils {
         Position endTrip = positions.get(endIndex);
 
         double speedMax = 0;
+        double totalDistance = 0.0;
+        var totalDistanceValid = true;
         for (int i = startIndex; i <= endIndex; i++) {
             double speed = positions.get(i).getSpeed();
             if (speed > speedMax) {
                 speedMax = speed;
+            }
+            
+            if (totalDistanceValid) {
+                try {
+                    totalDistance += positions.get(i).getDistance();
+                } catch (Exception e) {
+                    totalDistanceValid = false;
+                }
             }
         }
 
@@ -245,8 +255,11 @@ public class ReportUtils {
             endAddress = geocoder.getAddress(endTrip.getLatitude(), endTrip.getLongitude(), null);
         }
         trip.setEndAddress(endAddress);
-
-        trip.setDistance(PositionUtil.calculateDistance(startTrip, endTrip, !ignoreOdometer));
+        if (totalDistanceValid) {
+            trip.setDistance(totalDistance);
+        } else {
+            trip.setDistance(PositionUtil.calculateDistance(startTrip, endTrip, !ignoreOdometer));
+        }
         trip.setDuration(tripDuration);
         if (tripDuration > 0) {
             trip.setAverageSpeed(UnitsConverter.knotsFromMps(trip.getDistance() * 1000 / tripDuration));
@@ -331,11 +344,11 @@ public class ReportUtils {
     private boolean isMoving(ArrayList<Position> positions, int index, TripsConfig tripsConfig) {
         if (tripsConfig.getMinimalNoDataDuration() > 0) {
             boolean beforeGap = index < positions.size() - 1
-                    && positions.get(index + 1).getFixTime().getTime() - positions.get(index).getFixTime().getTime()
-                    >= tripsConfig.getMinimalNoDataDuration();
+                    && positions.get(index + 1).getFixTime().getTime()
+                            - positions.get(index).getFixTime().getTime() >= tripsConfig.getMinimalNoDataDuration();
             boolean afterGap = index > 0
-                    && positions.get(index).getFixTime().getTime() - positions.get(index - 1).getFixTime().getTime()
-                    >= tripsConfig.getMinimalNoDataDuration();
+                    && positions.get(index).getFixTime().getTime()
+                            - positions.get(index - 1).getFixTime().getTime() >= tripsConfig.getMinimalNoDataDuration();
             if (beforeGap || afterGap) {
                 return false;
             }

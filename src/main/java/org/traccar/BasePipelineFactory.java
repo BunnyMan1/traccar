@@ -41,7 +41,6 @@ import org.traccar.handler.RemoteAddressHandler;
 import org.traccar.handler.SpeedLimitHandler;
 import org.traccar.handler.StandardLoggingHandler;
 import org.traccar.handler.TimeHandler;
-import org.traccar.handler.TotalDistanceCorrectionHandler;
 import org.traccar.handler.events.AlertEventHandler;
 import org.traccar.handler.events.BehaviorEventHandler;
 import org.traccar.handler.events.CommandResultEventHandler;
@@ -142,8 +141,6 @@ public abstract class BasePipelineFactory extends ChannelInitializer<Channel> {
                 EngineHoursHandler.class,
                 ComputedAttributesHandler.class,
                 PositionForwardingHandler.class,
-                // Handler that will correct any inconsitencies in the total distance
-                // TotalDistanceCorrectionHandler.class,
                 DefaultDataHandler.class,
                 MediaEventHandler.class,
                 CommandResultEventHandler.class,
