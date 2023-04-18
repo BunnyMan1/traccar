@@ -62,6 +62,7 @@ public class SummaryReportProvider {
         SummaryReportItem result = new SummaryReportItem();
         result.setDeviceId(device.getId());
         result.setDeviceName(device.getName());
+        var totalDistance = 0.0;
         if (positions != null && !positions.isEmpty()) {
             Position firstPosition = null;
             Position previousPosition = null;
@@ -73,9 +74,11 @@ public class SummaryReportProvider {
                 if (position.getSpeed() > result.getMaxSpeed()) {
                     result.setMaxSpeed(position.getSpeed());
                 }
+                totalDistance += position.getDistance();
             }
             boolean ignoreOdometer = config.getBoolean(Keys.REPORT_IGNORE_ODOMETER);
-            result.setDistance(PositionUtil.calculateDistance(firstPosition, previousPosition, !ignoreOdometer));
+            // result.setDistance(PositionUtil.calculateDistance(firstPosition, previousPosition, !ignoreOdometer));
+            result.setDistance(totalDistance);
             result.setSpentFuel(reportUtils.calculateFuel(firstPosition, previousPosition));
 
             long durationMilliseconds;
