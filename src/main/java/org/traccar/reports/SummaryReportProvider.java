@@ -75,10 +75,13 @@ public class SummaryReportProvider {
                 if (position.getSpeed() > result.getMaxSpeed()) {
                     result.setMaxSpeed(position.getSpeed());
                 }
-                try {
-                    totalDistance += position.getDistance();
-                } catch (Exception e) {
-                    totalDistanceValid = false;
+
+                if (totalDistanceValid) {
+                    try {
+                        totalDistance += position.getDistance();
+                    } catch (Exception e) {
+                        totalDistanceValid = false;
+                    }
                 }
             }
             boolean ignoreOdometer = config.getBoolean(Keys.REPORT_IGNORE_ODOMETER);

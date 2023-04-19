@@ -27,7 +27,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
-import javax.json.JsonException;
 import javax.sql.DataSource;
 
 import org.traccar.config.Config;
@@ -36,7 +35,6 @@ import org.traccar.model.Device;
 import org.traccar.model.Group;
 import org.traccar.model.GroupedModel;
 import org.traccar.model.Permission;
-import org.traccar.model.Position;
 import org.traccar.storage.query.Columns;
 import org.traccar.storage.query.Condition;
 import org.traccar.storage.query.Order;
@@ -412,102 +410,6 @@ public class DatabaseStorage extends Storage {
         }
 
         return result.toString();
-    }
-
-    @Override
-    public <T> void updateObjects(List<T> entities, Request request) throws StorageException, JsonException {
-        if (entities.size() == 0) {
-            return;
-        }
-
-        // Currently support is only for updating positions
-        if (entities.get(0) instanceof Position) {
-            System.out.println(" to updateObjects " + entities.size() + " of deviceid:" + ((Position) entities.get(0)).getDeviceId());
-            if (entities.isEmpty()) {
-                return;
-            }
-            List<String> columns = Arrays.asList(
-                    "address", "protocol", "valid", "longitude", "latitude", "network", "deviceTime", "accuracy",
-                    "serverTime", "fixTime", "altitude", "speed", "course", "deviceId", "attributes", "id");
-            // System.out.println(" columns " + columns);
-            var classname = getStorageName(entities.get(0).getClass());
-            // System.out.println(" classname " + classname);
-            StringBuilder query = new StringBuilder(
-                    "INSERT INTO " + classname + " (" + formatColumns(columns, c -> c) + " ) VALUES ");
-
-            for (int i = 0; i < entities.size(); i++) {
-                var qs = "";
-                for (int j = 0; j < columns.size(); j++) {
-                    if (j == columns.size() - 1)
-                        qs += "?";
-                    else
-                        qs += "?, ";
-                }
-                query.append("(" + qs + ") ");
-
-                if (i != entities.size() - 1)
-                    query.append(", ");
-            }
-
-            // query.append("ON DUPLICATE KEY UPDATE attributes = VALUES(attributes)");
-
-            // System.out.println(" query " + query.toString());
-            Connection connection = null;
-            PreparedStatement ps = null;
-
-            try {
-                connection = dataSource.getConnection();
-
-                ps = connection.prepareStatement(query.toString());
-
-                for (int i = 0; i < entities.size(); i++) {
-
-                    var entity = (Position) entities.get(i);
-
-                    int index = (i * columns.size() + 1);
-
-                    ps.setString(index, entity.getAddress());
-                    ps.setString(index + 1, entity.getProtocol());
-                    ps.setBoolean(index + 2, entity.getValid());
-                    ps.setDouble(index + 3, entity.getLongitude());
-                    ps.setDouble(index + 4, entity.getLatitude());
-                    ps.setObject(index + 5, entity.getNetwork().toString());
-                    ps.setDate(index + 6, new java.sql.Date(entity.getDeviceTime().getTime()));
-                    ps.setDouble(index + 7, entity.getAccuracy());
-                    ps.setDate(index + 8, new java.sql.Date(entity.getServerTime().getTime()));
-                    ps.setDate(index + 9, new java.sql.Date(entity.getFixTime().getTime()));
-                    ps.setDouble(index + 10, entity.getAltitude());
-                    ps.setDouble(index + 11, entity.getSpeed());
-                    ps.setDouble(index + 12, entity.getCourse());
-                    ps.setLong(index + 13, entity.getDeviceId());
-                    ps.setObject(index + 14, objectMapper.writeValueAsString(entity.getAttributes()));
-                    ps.setLong(index + 15, entity.getId());
-
-                }
-                ps.executeUpdate();
-
-            } catch (SQLException e) {
-                throw new StorageException(e);
-            } catch (Exception e) {
-                e.printStackTrace();
-            } finally {
-                if (ps != null) {
-                    try {
-                        ps.close();
-                    } catch (SQLException e) {
-                        e.printStackTrace();
-                    }
-                }
-                if (connection != null) {
-                    try {
-                        connection.close();
-                    } catch (SQLException e) {
-                        e.printStackTrace();
-                    }
-                }
-
-            }
-        }
     }
 
 }
