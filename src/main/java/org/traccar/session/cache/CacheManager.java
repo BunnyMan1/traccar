@@ -325,17 +325,10 @@ public class CacheManager implements BroadcastInterface {
     }
 
     private void unsafeAddDevice(long deviceId) throws StorageException {
-        // stopwatch
-        var stopwatch = Stopwatch.createStarted();
-
         Map<Class<? extends BaseModel>, Set<Long>> links = new HashMap<>();
 
         Device device = storage.getObject(Device.class, new Request(
                 new Columns.All(), new Condition.Equals("id", deviceId)));
-
-        //print time
-        var millis = stopwatch.elapsed(TimeUnit.MILLISECONDS);
-        System.out.println("\nunsafeAddDevice getDevice: " + millis + "ms\n");
 
         if (device != null) {
             addObject(deviceId, device);
@@ -350,10 +343,6 @@ public class CacheManager implements BroadcastInterface {
                 groupId = group.getGroupId();
                 groupDepth += 1;
             }
-
-            // print time
-            millis = stopwatch.elapsed(TimeUnit.MILLISECONDS);
-            System.out.println("\nunsafeAddDevice getGroup: " + millis + "ms\n");
 
             for (Class<? extends BaseModel> clazz : CLASSES) {
                 var objects = storage.getObjects(clazz, new Request(
@@ -373,10 +362,6 @@ public class CacheManager implements BroadcastInterface {
                     }
                 }
             }
-
-            // print time
-            millis = stopwatch.elapsed(TimeUnit.MILLISECONDS);
-            System.out.println("\nunsafeAddDevice getObjects: " + millis + "ms\n");
 
             var users = storage.getObjects(User.class, new Request(
                     new Columns.All(), new Condition.Permission(User.class, Device.class, deviceId)));
@@ -402,22 +387,12 @@ public class CacheManager implements BroadcastInterface {
                 }
             }
 
-            // print time
-            millis = stopwatch.elapsed(TimeUnit.MILLISECONDS);
-            System.out.println("\nunsafeAddDevice getUsers: " + millis + "ms\n");
-
             deviceLinks.put(deviceId, links);
 
             if (device.getPositionId() > 0) {
                 devicePositions.put(deviceId, storage.getObject(Position.class, new Request(
                         new Columns.All(), new Condition.Equals("id", device.getPositionId()))));
             }
-
-            // print time
-            millis = stopwatch.elapsed(TimeUnit.MILLISECONDS);
-            System.out.println("\nunsafeAddDevice getPosition: " + millis + "ms\n");
-
-            stopwatch.stop();
         }
     }
 
@@ -459,6 +434,7 @@ public class CacheManager implements BroadcastInterface {
         boolean invalidateUsers = false;
         Set<Long> linkedDevices = new HashSet<>();
         for (var key : keys) {
+            System.out.println("key: " + key);
             if (key.classIs(Server.class)) {
                 invalidateServer = true;
             } else {
@@ -487,21 +463,19 @@ public class CacheManager implements BroadcastInterface {
             System.out.println("unsafeAddDevice: " + millis + "ms");
             stopwatch2.stop();
         }
+
         // print time
         millis = stopwatch.elapsed(TimeUnit.MILLISECONDS);
         System.out.println("for loop with unsafeRemoveDevice and unsafeAddDevice: " + millis + "ms");
+
         if (invalidateServer) {
             invalidateServer();
         }
-        // print time
-        millis = stopwatch.elapsed(TimeUnit.MILLISECONDS);
-        System.out.println("invalidateServer: " + millis + "ms");
+
         if (invalidateUsers) {
             invalidateUsers();
         }
-        // print time
-        millis = stopwatch.elapsed(TimeUnit.MILLISECONDS);
-        System.out.println("invalidateUsers: " + millis + "ms");
+
         stopwatch.stop();
     }
 
