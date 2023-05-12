@@ -300,6 +300,9 @@ public class CacheManager implements BroadcastInterface {
     }
 
     private void invalidateUsers() throws StorageException {
+        // stopwatch
+        var stopwatch = Stopwatch.createStarted();
+
         notificationUsers.clear();
         Map<Long, User> users = new HashMap<>();
         storage.getObjects(User.class, new Request(new Columns.All()))
@@ -309,6 +312,12 @@ public class CacheManager implements BroadcastInterface {
             var user = users.get(permission.getOwnerId());
             notificationUsers.computeIfAbsent(notificationId, k -> new LinkedList<>()).add(user);
         });
+        //print time
+        var millis = stopwatch.elapsed(TimeUnit.MILLISECONDS);
+        
+        System.out.println("\ninvalidateUsers Done: " + millis + "ms\n");
+
+        stopwatch.stop();
     }
 
     private void addObject(long deviceId, BaseModel object) {
@@ -399,11 +408,21 @@ public class CacheManager implements BroadcastInterface {
     }
 
     private void invalidate(CacheKey... keys) throws StorageException {
+        var stopwatch = Stopwatch.createStarted();
         try {
+            // start stopwatch
             lock.writeLock().lock();
+            // print time
+            long millis = stopwatch.elapsed(TimeUnit.MILLISECONDS);
+            System.out.println("\ninvalidate lock acquired: " + millis + "ms");
             unsafeInvalidate(keys);
         } finally {
             lock.writeLock().unlock();
+            // print time
+            long millis = stopwatch.elapsed(TimeUnit.MILLISECONDS);
+            System.out.println("invalidate lock released: " + millis + "ms\n");
+
+            stopwatch.stop();
         }
     }
 
