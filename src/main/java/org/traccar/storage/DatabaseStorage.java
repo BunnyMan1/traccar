@@ -193,19 +193,30 @@ public class DatabaseStorage extends Storage {
         query.append(permissions.get(0).getStorageName());
         query.append(" (");
         query.append(permissions.get(0).get().keySet().stream().map(key -> key).collect(Collectors.joining(", ")));
-        query.append(") VALUES (");
-        query.append(
-                permissions.get(0).get().keySet().stream().map(key -> ':' + key).collect(Collectors.joining(", ")));
-        query.append(")");
+        query.append(") VALUES ");
+
+        for (int i = 0; i < permissions.size(); i++) {
+            var iStr = Integer.toString(i);
+            query.append("(");
+            query.append(permissions.get(i).get().keySet().stream().map(key -> ':' + key + iStr).collect(Collectors.joining(", ")));
+            query.append(")");
+            if (i < permissions.size() - 1) {
+                query.append(", ");
+            }
+        }
+
         try {
             QueryBuilder builder = QueryBuilder.create(config, dataSource, objectMapper, query.toString(), true);
-            for (Permission permission : permissions) {
-                for (var entry : permission.get().entrySet()) {
-                    builder.setLong(entry.getKey(), entry.getValue());
+
+            for (int i = 0; i < permissions.size(); i++) {
+                var iStr = Integer.toString(i);
+                for (var entry : permissions.get(i).get().entrySet()) {
+                    builder.setLong(entry.getKey() + iStr, entry.getValue());
                 }
-                builder.addBatch();
             }
-            builder.executeBatch();
+
+            builder.executeUpdate();
+
         } catch (SQLException e) {
             throw new StorageException(e);
         }
