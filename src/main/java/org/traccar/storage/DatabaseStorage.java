@@ -184,6 +184,34 @@ public class DatabaseStorage extends Storage {
     }
 
     @Override
+    public void addPermissions(List<Permission> permissions) throws StorageException {
+        if (permissions.isEmpty()) {
+            return;
+        }
+
+        StringBuilder query = new StringBuilder("INSERT INTO ");
+        query.append(permissions.get(0).getStorageName());
+        query.append(" (");
+        query.append(permissions.get(0).get().keySet().stream().map(key -> key).collect(Collectors.joining(", ")));
+        query.append(") VALUES (");
+        query.append(
+                permissions.get(0).get().keySet().stream().map(key -> ':' + key).collect(Collectors.joining(", ")));
+        query.append(")");
+        try {
+            QueryBuilder builder = QueryBuilder.create(config, dataSource, objectMapper, query.toString(), true);
+            for (Permission permission : permissions) {
+                for (var entry : permission.get().entrySet()) {
+                    builder.setLong(entry.getKey(), entry.getValue());
+                }
+                builder.addBatch();
+            }
+            builder.executeBatch();
+        } catch (SQLException e) {
+            throw new StorageException(e);
+        }
+    }
+
+    @Override
     public void removePermission(Permission permission) throws StorageException {
         StringBuilder query = new StringBuilder("DELETE FROM ");
         query.append(permission.getStorageName());
@@ -196,6 +224,30 @@ public class DatabaseStorage extends Storage {
                 builder.setLong(entry.getKey(), entry.getValue());
             }
             builder.executeUpdate();
+        } catch (SQLException e) {
+            throw new StorageException(e);
+        }
+    }
+
+    @Override
+    public void removePermissions(List<Permission> permissions) throws StorageException {
+        if (permissions.isEmpty()) {
+            return;
+        }
+        StringBuilder query = new StringBuilder("DELETE FROM ");
+        query.append(permissions.get(0).getStorageName());
+        query.append(" WHERE ");
+        query.append(permissions.get(0)
+                .get().keySet().stream().map(key -> key + " = :" + key).collect(Collectors.joining(" AND ")));
+        try {
+            QueryBuilder builder = QueryBuilder.create(config, dataSource, objectMapper, query.toString(), true);
+            for (Permission permission : permissions) {
+                for (var entry : permission.get().entrySet()) {
+                    builder.setLong(entry.getKey(), entry.getValue());
+                }
+                builder.addBatch();
+            }
+            builder.executeBatch();
         } catch (SQLException e) {
             throw new StorageException(e);
         }

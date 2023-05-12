@@ -32,6 +32,8 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -82,6 +84,32 @@ public class PermissionsResource  extends BaseResource {
         return Response.noContent().build();
     }
 
+    @Path("bulk_multiple")
+    @POST
+    public Response addMultiple(List<LinkedHashMap<String, Long>> entities)
+            throws StorageException, ClassNotFoundException {
+        permissionsService.checkRestriction(getUserId(), UserRestrictions::getReadonly);
+        checkPermissionTypes(entities);
+        List<Permission> permissions = new ArrayList<Permission>();
+        for (LinkedHashMap<String, Long> entity : entities) {
+            Permission permission = new Permission(entity);
+            checkPermission(permission);
+            permissions.add(permission);
+        }
+        storage.addPermissions(permissions);
+
+        for (Permission permission : permissions) {
+            cacheManager.invalidatePermission(
+                    true,
+                    permission.getOwnerClass(), permission.getOwnerId(),
+                    permission.getPropertyClass(), permission.getPropertyId());
+            LogAction.link(getUserId(),
+                    permission.getOwnerClass(), permission.getOwnerId(),
+                    permission.getPropertyClass(), permission.getPropertyId());
+        }
+        return Response.noContent().build();
+    }
+
     @POST
     public Response add(LinkedHashMap<String, Long> entity) throws StorageException, ClassNotFoundException {
         return add(Collections.singletonList(entity));
@@ -96,6 +124,31 @@ public class PermissionsResource  extends BaseResource {
             Permission permission = new Permission(entity);
             checkPermission(permission);
             storage.removePermission(permission);
+            cacheManager.invalidatePermission(
+                    true,
+                    permission.getOwnerClass(), permission.getOwnerId(),
+                    permission.getPropertyClass(), permission.getPropertyId());
+            LogAction.unlink(getUserId(),
+                    permission.getOwnerClass(), permission.getOwnerId(),
+                    permission.getPropertyClass(), permission.getPropertyId());
+        }
+        return Response.noContent().build();
+    }
+
+    @DELETE
+    @Path("bulk_multiple")
+    public Response removeMultiple(List<LinkedHashMap<String, Long>> entities)
+            throws StorageException, ClassNotFoundException {
+        permissionsService.checkRestriction(getUserId(), UserRestrictions::getReadonly);
+        checkPermissionTypes(entities);
+        List<Permission> permissions = new ArrayList<Permission>();
+        for (LinkedHashMap<String, Long> entity : entities) {
+            Permission permission = new Permission(entity);
+            checkPermission(permission);
+            permissions.add(permission);
+        }
+        storage.removePermissions(permissions);
+        for (Permission permission : permissions) {
             cacheManager.invalidatePermission(
                     true,
                     permission.getOwnerClass(), permission.getOwnerId(),

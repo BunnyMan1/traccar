@@ -37,7 +37,11 @@ public abstract class Storage {
 
     public abstract void addPermission(Permission permission) throws StorageException;
 
+    public abstract void addPermissions(List<Permission> permissions) throws StorageException;
+    
     public abstract void removePermission(Permission permission) throws StorageException;
+
+    public abstract void removePermissions(List<Permission> permissions) throws StorageException;
 
     public List<Permission> getPermissions(
             Class<? extends BaseModel> ownerClass,
