@@ -23,6 +23,8 @@ import org.traccar.model.UserRestrictions;
 import org.traccar.session.cache.CacheManager;
 import org.traccar.storage.StorageException;
 
+import com.google.common.base.Stopwatch;
+
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
@@ -38,11 +40,12 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 @Path("permissions")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
-public class PermissionsResource  extends BaseResource {
+public class PermissionsResource extends BaseResource {
 
     @Inject
     private CacheManager cacheManager;
@@ -56,7 +59,7 @@ public class PermissionsResource  extends BaseResource {
 
     private void checkPermissionTypes(List<LinkedHashMap<String, Long>> entities) {
         Set<String> keys = null;
-        for (LinkedHashMap<String, Long> entity: entities) {
+        for (LinkedHashMap<String, Long> entity : entities) {
             if (keys != null & !entity.keySet().equals(keys)) {
                 throw new WebApplicationException(Response.status(Response.Status.BAD_REQUEST).build());
             }
@@ -69,7 +72,7 @@ public class PermissionsResource  extends BaseResource {
     public Response add(List<LinkedHashMap<String, Long>> entities) throws StorageException, ClassNotFoundException {
         permissionsService.checkRestriction(getUserId(), UserRestrictions::getReadonly);
         checkPermissionTypes(entities);
-        for (LinkedHashMap<String, Long> entity: entities) {
+        for (LinkedHashMap<String, Long> entity : entities) {
             Permission permission = new Permission(entity);
             checkPermission(permission);
             storage.addPermission(permission);
@@ -88,15 +91,26 @@ public class PermissionsResource  extends BaseResource {
     @POST
     public Response addMultiple(List<LinkedHashMap<String, Long>> entities)
             throws StorageException, ClassNotFoundException {
+
+        Stopwatch stopwatch = Stopwatch.createStarted();
+
         permissionsService.checkRestriction(getUserId(), UserRestrictions::getReadonly);
         checkPermissionTypes(entities);
         List<Permission> permissions = new ArrayList<Permission>();
+
         for (LinkedHashMap<String, Long> entity : entities) {
             Permission permission = new Permission(entity);
             checkPermission(permission);
             permissions.add(permission);
         }
+
+        long millis = stopwatch.elapsed(TimeUnit.MILLISECONDS);
+        System.out.println("First loop done: " + millis + " ms");
+
         storage.addPermissions(permissions);
+
+        millis = stopwatch.elapsed(TimeUnit.MILLISECONDS);
+        System.out.println("Add Permissions done: " + millis + " ms");
 
         for (Permission permission : permissions) {
             cacheManager.invalidatePermission(
@@ -107,6 +121,12 @@ public class PermissionsResource  extends BaseResource {
                     permission.getOwnerClass(), permission.getOwnerId(),
                     permission.getPropertyClass(), permission.getPropertyId());
         }
+
+        millis = stopwatch.elapsed(TimeUnit.MILLISECONDS);
+        System.out.println("Second loop done: " + millis + " ms");
+
+        stopwatch.stop();
+
         return Response.noContent().build();
     }
 
@@ -120,7 +140,7 @@ public class PermissionsResource  extends BaseResource {
     public Response remove(List<LinkedHashMap<String, Long>> entities) throws StorageException, ClassNotFoundException {
         permissionsService.checkRestriction(getUserId(), UserRestrictions::getReadonly);
         checkPermissionTypes(entities);
-        for (LinkedHashMap<String, Long> entity: entities) {
+        for (LinkedHashMap<String, Long> entity : entities) {
             Permission permission = new Permission(entity);
             checkPermission(permission);
             storage.removePermission(permission);

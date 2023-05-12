@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -38,6 +39,7 @@ import org.traccar.storage.query.Order;
 import org.traccar.storage.query.Request;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Stopwatch;
 
 public class DatabaseStorage extends Storage {
 
@@ -186,11 +188,18 @@ public class DatabaseStorage extends Storage {
             return;
         }
 
+        // create stopwatch
+        var stopwatch = Stopwatch.createStarted();
+
         StringBuilder query = new StringBuilder("INSERT INTO ");
         query.append(permissions.get(0).getStorageName());
         query.append(" (");
         query.append(permissions.get(0).get().keySet().stream().map(key -> key).collect(Collectors.joining(", ")));
         query.append(") VALUES ");
+
+        // record first stopwatch time elapsed and print
+        var firstElapsed = stopwatch.elapsed(TimeUnit.MILLISECONDS);
+        System.out.println("First elapsed: " + firstElapsed + " ms");
 
         for (int i = 0; i < permissions.size(); i++) {
             var iStr = Integer.toString(i);
@@ -202,6 +211,9 @@ public class DatabaseStorage extends Storage {
             }
         }
 
+        var secondElapsed = stopwatch.elapsed(TimeUnit.MILLISECONDS);
+        System.out.println("Second elapsed: " + secondElapsed + " ms");
+
         try {
             QueryBuilder builder = QueryBuilder.create(config, dataSource, objectMapper, query.toString(), true);
 
@@ -211,6 +223,11 @@ public class DatabaseStorage extends Storage {
                     builder.setLong(entry.getKey() + iStr, entry.getValue());
                 }
             }
+
+            var thirdElapsed = stopwatch.elapsed(TimeUnit.MILLISECONDS);
+            System.out.println("Third elapsed: " + thirdElapsed + " ms");
+
+            stopwatch.stop();
 
             builder.executeUpdate();
 
