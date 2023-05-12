@@ -117,6 +117,10 @@ public class PermissionsResource extends BaseResource {
                     true,
                     permission.getOwnerClass(), permission.getOwnerId(),
                     permission.getPropertyClass(), permission.getPropertyId());
+
+            millis = stopwatch.elapsed(TimeUnit.MILLISECONDS);
+            System.out.println("Invalidate done: " + millis + " ms");
+
             LogAction.link(getUserId(),
                     permission.getOwnerClass(), permission.getOwnerId(),
                     permission.getPropertyClass(), permission.getPropertyId());

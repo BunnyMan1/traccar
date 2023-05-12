@@ -40,6 +40,8 @@ import org.traccar.storage.query.Columns;
 import org.traccar.storage.query.Condition;
 import org.traccar.storage.query.Request;
 
+import com.google.common.base.Stopwatch;
+
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.util.Arrays;
@@ -53,6 +55,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
@@ -270,12 +273,23 @@ public class CacheManager implements BroadcastInterface {
             boolean local,
             Class<? extends BaseModel> clazz1, long id1,
             Class<? extends BaseModel> clazz2, long id2) {
+        
+        var stopwatch = Stopwatch.createStarted();
+
         if (local) {
             broadcastService.invalidatePermission(true, clazz1, id1, clazz2, id2);
         }
 
+        var millis = stopwatch.elapsed(TimeUnit.MILLISECONDS);
+        System.out.println("\ninvalidatePermission local: " + millis + "ms");
+
         try {
             invalidate(new CacheKey(clazz1, id1), new CacheKey(clazz2, id2));
+
+            millis = stopwatch.elapsed(TimeUnit.MILLISECONDS);
+            System.out.println("invalidatePermission invalidate: " + millis + "ms\n");
+
+            stopwatch.stop();
         } catch (StorageException e) {
             throw new RuntimeException(e);
         }
