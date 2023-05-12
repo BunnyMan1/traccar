@@ -40,8 +40,6 @@ import org.traccar.storage.query.Columns;
 import org.traccar.storage.query.Condition;
 import org.traccar.storage.query.Request;
 
-import com.google.common.base.Stopwatch;
-
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.util.Arrays;
@@ -55,7 +53,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
@@ -274,22 +271,12 @@ public class CacheManager implements BroadcastInterface {
             Class<? extends BaseModel> clazz1, long id1,
             Class<? extends BaseModel> clazz2, long id2) {
         
-        var stopwatch = Stopwatch.createStarted();
-
         if (local) {
             broadcastService.invalidatePermission(true, clazz1, id1, clazz2, id2);
         }
 
-        var millis = stopwatch.elapsed(TimeUnit.MILLISECONDS);
-        System.out.println("\ninvalidatePermission local: " + millis + "ms");
-
         try {
             invalidate(new CacheKey(clazz1, id1), new CacheKey(clazz2, id2));
-
-            millis = stopwatch.elapsed(TimeUnit.MILLISECONDS);
-            System.out.println("invalidatePermission invalidate: " + millis + "ms\n");
-
-            stopwatch.stop();
         } catch (StorageException e) {
             throw new RuntimeException(e);
         }
@@ -300,8 +287,6 @@ public class CacheManager implements BroadcastInterface {
     }
 
     private void invalidateUsers() throws StorageException {
-        // stopwatch
-        var stopwatch = Stopwatch.createStarted();
 
         notificationUsers.clear();
         Map<Long, User> users = new HashMap<>();
@@ -312,12 +297,6 @@ public class CacheManager implements BroadcastInterface {
             var user = users.get(permission.getOwnerId());
             notificationUsers.computeIfAbsent(notificationId, k -> new LinkedList<>()).add(user);
         });
-        //print time
-        var millis = stopwatch.elapsed(TimeUnit.MILLISECONDS);
-        
-        System.out.println("\ninvalidateUsers Done: " + millis + "ms\n");
-
-        stopwatch.stop();
     }
 
     private void addObject(long deviceId, BaseModel object) {
@@ -409,32 +388,19 @@ public class CacheManager implements BroadcastInterface {
     }
 
     private void invalidate(CacheKey... keys) throws StorageException {
-        var stopwatch = Stopwatch.createStarted();
         try {
-            // start stopwatch
             lock.writeLock().lock();
-            // print time
-            long millis = stopwatch.elapsed(TimeUnit.MILLISECONDS);
-            System.out.println("\ninvalidate lock acquired: " + millis + "ms");
             unsafeInvalidate(keys);
         } finally {
             lock.writeLock().unlock();
-            // print time
-            long millis = stopwatch.elapsed(TimeUnit.MILLISECONDS);
-            System.out.println("invalidate lock released: " + millis + "ms\n");
-
-            stopwatch.stop();
         }
     }
 
     private void unsafeInvalidate(CacheKey[] keys) throws StorageException {
-        // start stopwatch
-        var stopwatch = Stopwatch.createStarted();
         boolean invalidateServer = false;
         boolean invalidateUsers = false;
         Set<Long> linkedDevices = new HashSet<>();
         for (var key : keys) {
-            System.out.println("key: " + key);
             if (key.classIs(Server.class)) {
                 invalidateServer = true;
             } else {
@@ -447,26 +413,10 @@ public class CacheManager implements BroadcastInterface {
                 });
             }
         }
-        // print time
-        long millis = stopwatch.elapsed(TimeUnit.MILLISECONDS);
-        System.out.println("for loop with computeIfPresent: " + millis + "ms");
         for (long deviceId : linkedDevices) {
-            // new stopwatch
-            var stopwatch2 = Stopwatch.createStarted();
             unsafeRemoveDevice(deviceId);
-            // print time
-            millis = stopwatch2.elapsed(TimeUnit.MILLISECONDS);
-            System.out.println("unsafeRemoveDevice: " + millis + "ms");
             unsafeAddDevice(deviceId);
-            // print time
-            millis = stopwatch2.elapsed(TimeUnit.MILLISECONDS);
-            System.out.println("unsafeAddDevice: " + millis + "ms");
-            stopwatch2.stop();
         }
-
-        // print time
-        millis = stopwatch.elapsed(TimeUnit.MILLISECONDS);
-        System.out.println("for loop with unsafeRemoveDevice and unsafeAddDevice: " + millis + "ms");
 
         if (invalidateServer) {
             invalidateServer();
@@ -475,8 +425,6 @@ public class CacheManager implements BroadcastInterface {
         if (invalidateUsers) {
             invalidateUsers();
         }
-
-        stopwatch.stop();
     }
 
 }

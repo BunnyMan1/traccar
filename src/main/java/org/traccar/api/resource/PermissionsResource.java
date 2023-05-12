@@ -23,8 +23,6 @@ import org.traccar.model.UserRestrictions;
 import org.traccar.session.cache.CacheManager;
 import org.traccar.storage.StorageException;
 
-import com.google.common.base.Stopwatch;
-
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
@@ -40,7 +38,6 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 
 @Path("permissions")
 @Produces(MediaType.APPLICATION_JSON)
@@ -92,8 +89,6 @@ public class PermissionsResource extends BaseResource {
     public Response addMultiple(List<LinkedHashMap<String, Long>> entities)
             throws StorageException, ClassNotFoundException {
 
-        Stopwatch stopwatch = Stopwatch.createStarted();
-
         permissionsService.checkRestriction(getUserId(), UserRestrictions::getReadonly);
         checkPermissionTypes(entities);
         List<Permission> permissions = new ArrayList<Permission>();
@@ -104,32 +99,25 @@ public class PermissionsResource extends BaseResource {
             permissions.add(permission);
         }
 
-        long millis = stopwatch.elapsed(TimeUnit.MILLISECONDS);
-        System.out.println("First loop done: " + millis + " ms");
-
         storage.addPermissions(permissions);
 
-        millis = stopwatch.elapsed(TimeUnit.MILLISECONDS);
-        System.out.println("Add Permissions done: " + millis + " ms");
-
         for (Permission permission : permissions) {
-            cacheManager.invalidatePermission(
-                    true,
-                    permission.getOwnerClass(), permission.getOwnerId(),
-                    permission.getPropertyClass(), permission.getPropertyId());
+            boolean isUserGroupPermissionItem = permission.getOwnerClass().equals(org.traccar.model.User.class)
+                    && permission.getPropertyClass().equals(org.traccar.model.Group.class);
 
-            millis = stopwatch.elapsed(TimeUnit.MILLISECONDS);
-            System.out.println("Invalidate done: " + millis + " ms");
+            // Skip cache invalidation for user-group permission items.
+            // It is taking a lot of time and does not seem to have issues with cache when not invalidated.
+            if (!isUserGroupPermissionItem) {
+                cacheManager.invalidatePermission(
+                        true,
+                        permission.getOwnerClass(), permission.getOwnerId(),
+                        permission.getPropertyClass(), permission.getPropertyId());
+            }
 
             LogAction.link(getUserId(),
                     permission.getOwnerClass(), permission.getOwnerId(),
                     permission.getPropertyClass(), permission.getPropertyId());
         }
-
-        millis = stopwatch.elapsed(TimeUnit.MILLISECONDS);
-        System.out.println("Second loop done: " + millis + " ms");
-
-        stopwatch.stop();
 
         return Response.noContent().build();
     }
