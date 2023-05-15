@@ -56,3 +56,6 @@ Test protocol message:
 Run server locally:
 - VSCode: Run with / without debugging
 - Web app: cd traccar-web/modern/ && npm run start
+
+Test Server:
+- gradle test

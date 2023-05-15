@@ -16,6 +16,9 @@
 package org.traccar.protocol;
 
 import io.netty.channel.Channel;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.traccar.BaseProtocolDecoder;
 import org.traccar.session.DeviceSession;
 import org.traccar.NetworkMessage;
@@ -36,6 +39,8 @@ import java.util.regex.Pattern;
 
 public class ItsProtocolDecoder extends BaseProtocolDecoder {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(ItsProtocolDecoder.class);
+
     public ItsProtocolDecoder(Protocol protocol) {
         super(protocol);
     }
@@ -45,15 +50,15 @@ public class ItsProtocolDecoder extends BaseProtocolDecoder {
             .text("$")
             .expression(",?[^,]+,")              // event / Header
             .groupBegin()
-            .expression("[^,]*,")                // vendor / iTriangle
-            .expression("[^,]+,")                // firmware version / 1_37T02B0164MAIS_6
+            .expression("([^,]*),")              // vendor / iTriangle
+            .expression("([^,]+),")              // firmware version - "1_37T02B0164MAIS_6" OR "BHARAT101C_0267"
             .expression("(..),")                 // status / Packet Type
             .number("(d+),").optional()          // event / Message ID
             .expression("([LH]),")               // history / Packet Status
             .or()
             .expression("([^,]+),")              // type
             .groupEnd()
-            .number("(d{15}),")                  // imei / IMEI
+            .number("(d{15}),")                  // imei / IMEI (Device Unique ID)
             .groupBegin()
             .expression("([^,]{2}),")            // status
             .or()
@@ -167,12 +172,28 @@ public class ItsProtocolDecoder extends BaseProtocolDecoder {
             return null;
         }
 
-        String status = parser.next(); // $
+        String vendor = parser.next(); // vendor / iTriangle
+        String firmwareVersion = parser.next(); // firmware version - "1_37T02B0164MAIS_6" OR "BHARAT101C_0267"
+        
+        String status = parser.next(); // status / Packet Type
+
         Integer event = parser.nextInt(); // event / Message ID
         boolean history = "H".equals(parser.next()); // history / Packet Status
         String type = parser.next(); // type
 
-        DeviceSession deviceSession = getDeviceSession(channel, remoteAddress, parser.next()); // imei / IMEI
+        var deviceUniqueId = parser.next(); // imei / IMEI (Device Unique ID)
+
+        if (vendor != null && vendor.contains("iTriangle") 
+            && firmwareVersion != null && !firmwareVersion.startsWith("BHARAT101")) {
+            // Ignoring messages not coming from firmware version "BHARAT101..."
+            // As they are not coming from primary server configuration on the device.
+            
+            LOGGER.warn("Ignoring message from iTriangle device with firmware version: " + firmwareVersion + ". Device Unique ID: " + deviceUniqueId);
+            
+            return null; 
+        }
+
+        DeviceSession deviceSession = getDeviceSession(channel, remoteAddress, deviceUniqueId);
         if (deviceSession == null) {
             return null;
         }
