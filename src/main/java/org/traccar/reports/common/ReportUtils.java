@@ -27,6 +27,7 @@ import org.jxls.transform.Transformer;
 import org.jxls.transform.poi.PoiTransformer;
 import org.jxls.util.TransformerFactory;
 import org.traccar.api.security.PermissionsService;
+import org.traccar.api.security.ServiceAccountUser;
 import org.traccar.config.Config;
 import org.traccar.config.Keys;
 import org.traccar.geocoder.Geocoder;
@@ -38,6 +39,7 @@ import org.traccar.model.Device;
 import org.traccar.model.Driver;
 import org.traccar.model.Group;
 import org.traccar.model.Position;
+import org.traccar.model.Server;
 import org.traccar.model.User;
 import org.traccar.reports.model.BaseReportItem;
 import org.traccar.reports.model.StopReportItem;
@@ -175,8 +177,19 @@ public class ReportUtils {
     }
 
     public org.jxls.common.Context initializeContext(long userId) throws StorageException {
-        var server = permissionsService.getServer();
-        var user = permissionsService.getUser(userId);
+        // var server = permissionsService.getServer();
+        // var user = permissionsService.getUser(userId);
+        Server server = storage.getObject(Server.class, new Request(new Columns.All()));
+        User user = null;
+        if (user == null && userId > 0) {
+            if (userId == ServiceAccountUser.ID) {
+                user = new ServiceAccountUser();
+            } else {
+                user = storage.getObject(User.class,
+                        new Request(new Columns.All(), new Condition.Equals("id", userId)));
+            }
+        }
+
         var context = PoiTransformer.createInitialContext();
         context.putVar("distanceUnit", UserUtil.getDistanceUnit(server, user));
         context.putVar("speedUnit", UserUtil.getSpeedUnit(server, user));
