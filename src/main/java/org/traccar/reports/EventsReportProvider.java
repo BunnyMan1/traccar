@@ -16,17 +16,14 @@
  */
 package org.traccar.reports;
 
-import org.apache.poi.ss.util.WorkbookUtil;
+import org.jxls.util.JxlsHelper;
 import org.traccar.config.Config;
 import org.traccar.config.Keys;
 import org.traccar.model.Device;
-import org.traccar.model.Event;
+import org.traccar.model.EventDTO;
 import org.traccar.model.Geofence;
-import org.traccar.model.Group;
 import org.traccar.model.Maintenance;
-import org.traccar.model.Position;
 import org.traccar.reports.common.ReportUtils;
-import org.traccar.reports.model.DeviceReportSection;
 import org.traccar.storage.Storage;
 import org.traccar.storage.StorageException;
 import org.traccar.storage.query.Columns;
@@ -61,25 +58,26 @@ public class EventsReportProvider {
         this.storage = storage;
     }
 
-    private List<Event> getEvents(long deviceId, Date from, Date to) throws StorageException {
-        return storage.getObjects(Event.class, new Request(
+    private List<EventDTO> getEvents(long deviceId, Date from, Date to, long groupId) throws StorageException {
+        List<EventDTO> events = storage.getGroupEvents(EventDTO.class, new Request(// change
                 new Columns.All(),
                 new Condition.And(
                         new Condition.Equals("deviceId", deviceId),
                         new Condition.Between("eventTime", "from", from, "to", to)),
-                new Order("eventTime")));
+                new Order("eventTime")), groupId, from, to);
+        return events;
     }
 
-    public Collection<Event> getObjects(
+    public Collection<EventDTO> getObjects(
             long userId, Collection<Long> deviceIds, Collection<Long> groupIds,
             Collection<String> types, Date from, Date to) throws StorageException {
         reportUtils.checkPeriodLimit(from, to);
 
-        ArrayList<Event> result = new ArrayList<>();
+        ArrayList<EventDTO> result = new ArrayList<>();
         for (Device device : reportUtils.getAccessibleDevices(userId, deviceIds, groupIds)) {
-            Collection<Event> events = getEvents(device.getId(), from, to);
-            boolean all = types.isEmpty() || types.contains(Event.ALL_EVENTS);
-            for (Event event : events) {
+            Collection<EventDTO> events = getEvents(device.getId(), from, to, device.getGroupId());
+            boolean all = types.isEmpty() || types.contains(EventDTO.ALL_EVENTS);
+            for (EventDTO event : events) {
                 if (all || types.contains(event.getType())) {
                     long geofenceId = event.getGeofenceId();
                     long maintenanceId = event.getMaintenanceId();
@@ -99,83 +97,33 @@ public class EventsReportProvider {
             Collection<String> types, Date from, Date to) throws StorageException, IOException {
         reportUtils.checkPeriodLimit(from, to);
 
-        // ArrayList<DeviceReportSection<Event>> devicesEvents = new ArrayList<>();
-        ArrayList<String> sheetNames = new ArrayList<>();
-        HashMap<Long, String> geofenceNames = new HashMap<>();
-        HashMap<Long, String> maintenanceNames = new HashMap<>();
-        HashMap<Long, Position> positions = new HashMap<>();
-
-        // Have only 1 sheet for all devices data
-        sheetNames.add(WorkbookUtil.createSafeSheetName("Sheet1"));
-
-        DeviceReportSection<Event> allDevicesEvents = new DeviceReportSection<Event>();
-
+        ArrayList<EventDTO> result = new ArrayList<>();
         for (Device device : reportUtils.getAccessibleDevices(userId, deviceIds, groupIds)) {
-            Collection<Event> events = getEvents(device.getId(), from, to);
-            boolean all = types.isEmpty() || types.contains(Event.ALL_EVENTS);
-            for (Iterator<Event> iterator = events.iterator(); iterator.hasNext();) {
-                Event event = iterator.next();
-                event.setDeviceName(device.getName());
+            Collection<EventDTO> events = getEvents(device.getId(), from, to, device.getGroupId());
+            boolean all = types.isEmpty() || types.contains(EventDTO.ALL_EVENTS);
+            for (EventDTO event : events) {
+
                 if (all || types.contains(event.getType())) {
                     long geofenceId = event.getGeofenceId();
                     long maintenanceId = event.getMaintenanceId();
-                    if (geofenceId != 0) {
-                        Geofence geofence = reportUtils.getObject(userId, Geofence.class, geofenceId);
-                        if (geofence != null) {
-                            geofenceNames.put(geofenceId, geofence.getName());
-                        } else {
-                            iterator.remove();
-                        }
-                    } else if (maintenanceId != 0) {
-                        Maintenance maintenance = reportUtils.getObject(userId, Maintenance.class, maintenanceId);
-                        if (maintenance != null) {
-                            maintenanceNames.put(maintenanceId, maintenance.getName());
-                        } else {
-                            iterator.remove();
-                        }
+                    if ((geofenceId == 0 || reportUtils.getObject(userId, Geofence.class, geofenceId) != null)
+                            && (maintenanceId == 0
+                                    || reportUtils.getObject(userId, Maintenance.class, maintenanceId) != null)) {
+                        result.add(event);
                     }
-                } else {
-                    iterator.remove();
                 }
             }
-
-            for (Event event : events) {
-                long positionId = event.getPositionId();
-                if (positionId > 0) {
-                    Position position = storage.getObject(Position.class, new Request(
-                            new Columns.All(), new Condition.Equals("id", positionId)));
-                    positions.put(positionId, position);
-                }
-            }
-            // DeviceReportSection deviceEvents = new DeviceReportSection();
-            // deviceEvents.setDeviceName(device.getName());
-            // sheetNames.add(WorkbookUtil.createSafeSheetName(deviceEvents.getDeviceName()));
-            // if (device.getGroupId() > 0) {
-            // Group group = storage.getObject(Group.class, new Request(
-            // new Columns.All(), new Condition.Equals("id", device.getGroupId())));
-            // if (group != null) {
-            // deviceEvents.setGroupName(group.getName());
-            // }
-            // }
-            allDevicesEvents.addObjects(events);
-            // deviceEvents.setObjects(events);
-            // devicesEvents.add(deviceEvents);
         }
 
-        var singleEventsList = new ArrayList<DeviceReportSection<Event>>();
-        singleEventsList.add(allDevicesEvents); // Only 1 item contains all devices events
-
-        File file = Paths.get(config.getString(Keys.TEMPLATES_ROOT), "export", "events.xlsx").toFile();
+        File file = Paths.get(config.getString(Keys.TEMPLATES_ROOT), "export", "events2.xlsx").toFile();
         try (InputStream inputStream = new FileInputStream(file)) {
             var context = reportUtils.initializeContext(userId);
-            context.putVar("devices", singleEventsList);
-            context.putVar("sheetNames", sheetNames);
-            context.putVar("geofenceNames", geofenceNames);
-            context.putVar("maintenanceNames", maintenanceNames);
-            context.putVar("positions", positions);
+            context.putVar("summaries", result);
             context.putVar("from", from);
             context.putVar("to", to);
-            reportUtils.processTemplateWithSheets(inputStream, outputStream, context);
+            JxlsHelper.getInstance().setUseFastFormulaProcessor(false)
+                    .processTemplate(inputStream, outputStream, context);
         }
+
     }
 }
