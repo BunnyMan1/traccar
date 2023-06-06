@@ -20,6 +20,7 @@ import org.traccar.model.Pair;
 import org.traccar.model.Permission;
 import org.traccar.storage.query.Request;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -75,5 +76,14 @@ public class MemoryStorage extends Storage {
         getPermissionsSet(permission.getOwnerClass(), permission.getPropertyClass())
                 .remove(new Pair<>(permission.getOwnerId(), permission.getPropertyId()));
     }
+
+    @Override
+    public <T> List<T> getGroupEvents(Class<T> clazz, Request request, long groupId, Date from, Date to)
+            throws StorageException {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getGroupEvents'");
+    }
+
+
 
 }

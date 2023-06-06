@@ -30,6 +30,7 @@ import org.traccar.storage.query.Request;
 import javax.inject.Inject;
 import javax.sql.DataSource;
 import java.sql.SQLException;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -405,6 +406,52 @@ public class DatabaseStorage extends Storage {
         }
 
         return result.toString();
+    }
+
+    @Override
+    public <T> List<T> getGroupEvents(Class<T> clazz, Request request, long groupId, Date from, Date to)
+            throws StorageException {
+        
+
+                StringBuilder query = new StringBuilder("SELECT " +
+                "tc_events.id, " +
+                "tc_events.type, " +
+                "tc_events.eventtime, " +
+                "tc_events.deviceid, " +
+                "tc_events.positionid, " +
+                "tc_events.geofenceid, " +
+                "tc_events.attributes AS deviceattributes, " +
+                "tc_events.maintenanceid, " +
+                "tc_devices.name AS devicename, " +
+                "tc_groups.name AS groupname, " +
+                "tc_maintenances.name AS maintenancename, " +
+                "tc_geofences.name AS geofencename " +
+                "FROM tc_events " +
+                "LEFT JOIN tc_devices ON tc_devices.id = tc_events.deviceid " +
+                "LEFT JOIN tc_groups ON tc_groups.id = tc_devices.groupid " +
+                "LEFT JOIN tc_maintenances ON tc_maintenances.id = tc_events.maintenanceid " +
+                "LEFT JOIN tc_geofences ON tc_geofences.id = tc_events.geofenceid " +
+                "WHERE tc_devices.groupid = :groupId " +
+                "AND tc_events.eventtime BETWEEN :from AND :to");
+                try {
+                QueryBuilder builder = QueryBuilder.create(config, dataSource, objectMapper, query.toString());
+                builder.setValue("groupId", groupId);
+                builder.setValue("from", from);
+                builder.setValue("to", to);
+
+                // Set condition variables
+                for (Map.Entry<String, Object> variable : getConditionVariables(request.getCondition()).entrySet()) {
+                builder.setValue(variable.getKey(), variable.getValue());
+                }
+                // Execute query and get the list of events
+                List<T> events = builder.executeQuery(clazz);
+                return events;
+                } catch (SQLException e) {
+                throw new StorageException(e);
+                }
+
+
+
     }
 
 }

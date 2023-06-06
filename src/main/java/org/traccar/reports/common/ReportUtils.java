@@ -191,8 +191,7 @@ public class ReportUtils {
     }
 
     public void processTemplateWithSheets(
-            InputStream templateStream, OutputStream targetStream, org.jxls.common.Context context) throws IOException {
-
+        InputStream templateStream, OutputStream targetStream, org.jxls.common.Context context) throws IOException {
         Transformer transformer = TransformerFactory.createTransformer(templateStream, targetStream);
         List<Area> xlsAreas = new XlsCommentAreaBuilder(transformer).build();
         for (Area xlsArea : xlsAreas) {
@@ -203,6 +202,18 @@ public class ReportUtils {
         transformer.deleteSheet(xlsAreas.get(0).getStartCellRef().getSheetName());
         transformer.write();
     }
+    public void processTemplateWithSingleSheet(
+        InputStream templateStream, OutputStream targetStream, org.jxls.common.Context context) throws IOException {
+
+    Transformer transformer = TransformerFactory.createTransformer(templateStream, targetStream);
+    Area xlsArea = new XlsCommentAreaBuilder(transformer).build().get(0);
+    xlsArea.applyAt(new CellRef(xlsArea.getStartCellRef().getCellName()), context);
+    xlsArea.setFormulaProcessor(new StandardFormulaProcessor());
+    xlsArea.processFormulas();
+    transformer.deleteSheet(xlsArea.getStartCellRef().getSheetName());
+    transformer.write();
+}
+
 
     private TripReportItem calculateTrip(
             Device device, ArrayList<Position> positions, int startIndex, int endIndex,
@@ -331,11 +342,11 @@ public class ReportUtils {
     private boolean isMoving(ArrayList<Position> positions, int index, TripsConfig tripsConfig) {
         if (tripsConfig.getMinimalNoDataDuration() > 0) {
             boolean beforeGap = index < positions.size() - 1
-                    && positions.get(index + 1).getFixTime().getTime() - positions.get(index).getFixTime().getTime()
-                    >= tripsConfig.getMinimalNoDataDuration();
+                    && positions.get(index + 1).getFixTime().getTime()
+                            - positions.get(index).getFixTime().getTime() >= tripsConfig.getMinimalNoDataDuration();
             boolean afterGap = index > 0
-                    && positions.get(index).getFixTime().getTime() - positions.get(index - 1).getFixTime().getTime()
-                    >= tripsConfig.getMinimalNoDataDuration();
+                    && positions.get(index).getFixTime().getTime()
+                            - positions.get(index - 1).getFixTime().getTime() >= tripsConfig.getMinimalNoDataDuration();
             if (beforeGap || afterGap) {
                 return false;
             }
