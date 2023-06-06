@@ -39,7 +39,7 @@ import org.traccar.api.SimpleObjectResource;
 import org.traccar.helper.LogAction;
 import org.traccar.helper.model.UserUtil;
 import org.traccar.model.Device;
-import org.traccar.model.Event;
+import org.traccar.model.EventDTO;
 import org.traccar.model.Group;
 import org.traccar.model.Position;
 import org.traccar.model.Report;
@@ -208,7 +208,7 @@ public class ReportResource extends SimpleObjectResource<Report> {
 
     @Path("events")
     @GET
-    public Collection<Event> getEvents(
+    public Collection<EventDTO> getEvents(
             @QueryParam("deviceId") List<Long> deviceIds,
             @QueryParam("groupId") List<Long> groupIds,
             @QueryParam("type") List<String> types,
