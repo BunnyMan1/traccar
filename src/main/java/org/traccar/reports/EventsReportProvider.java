@@ -118,7 +118,7 @@ public class EventsReportProvider {
         File file = Paths.get(config.getString(Keys.TEMPLATES_ROOT), "export", "events2.xlsx").toFile();
         try (InputStream inputStream = new FileInputStream(file)) {
             var context = reportUtils.initializeContext(userId);
-            context.putVar("summaries", result);
+            context.putVar("events", result);
             context.putVar("from", from);
             context.putVar("to", to);
             JxlsHelper.getInstance().setUseFastFormulaProcessor(false)
