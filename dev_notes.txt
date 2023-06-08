@@ -18,6 +18,7 @@ Deploy Steps:
     - rm /home/bunny/build/*
 - Transfer build to server:
     - rsync -a --progress traccar-linux-64-5.6.zip nconnect_gps:/home/bunny/build/
+    - rsync -a --progress traccar-linux-64-5.6.zip nspira_gps:/home/bunny/build/
     - Repeat above step for nspira_gps too.
 - ssh into each server:
     - mkdir ./backup/<date>/
