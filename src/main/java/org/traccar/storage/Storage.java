@@ -19,9 +19,11 @@ import org.traccar.model.BaseModel;
 import org.traccar.model.Permission;
 import org.traccar.storage.query.Request;
 
+import java.util.Date;
 import java.util.List;
 
 public abstract class Storage {
+    public abstract <T> List<T> getGroupEvents(Class<T> clazz,Request request, long groupId,Date from, Date to) throws StorageException;
 
     public abstract <T> List<T> getObjects(Class<T> clazz, Request request) throws StorageException;
 
