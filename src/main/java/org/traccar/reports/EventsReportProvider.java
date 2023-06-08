@@ -110,12 +110,25 @@ public class EventsReportProvider {
 
         DeviceReportSection<Event> allDevicesEvents = new DeviceReportSection<Event>();
 
+        // Group names cache
+        HashMap<Long, String> groupNames = new HashMap<>();
+
         for (Device device : reportUtils.getAccessibleDevices(userId, deviceIds, groupIds)) {
             Collection<Event> events = getEvents(device.getId(), from, to);
             boolean all = types.isEmpty() || types.contains(Event.ALL_EVENTS);
             for (Iterator<Event> iterator = events.iterator(); iterator.hasNext();) {
                 Event event = iterator.next();
+
                 event.setDeviceName(device.getName());
+
+                if (groupNames.get(device.getGroupId()) == null) {
+                    Group group = storage.getObject(Group.class, new Request(
+                            new Columns.All(), new Condition.Equals("id", device.getGroupId())));
+                    groupNames.put(device.getGroupId(), group.getName());
+                }
+
+                event.setGroupName(groupNames.get(device.getGroupId()));
+
                 if (all || types.contains(event.getType())) {
                     long geofenceId = event.getGeofenceId();
                     long maintenanceId = event.getMaintenanceId();

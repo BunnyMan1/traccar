@@ -90,6 +90,18 @@ public class Event extends Message {
         this.deviceName = deviceName;
     }
 
+    private String groupName;
+
+    @QueryIgnore
+    public String getGroupName() {
+        return groupName;
+    }
+
+    @QueryIgnore
+    public void setGroupName(String groupName) {
+        this.groupName = groupName;
+    }
+
     private long positionId;
 
     public long getPositionId() {
