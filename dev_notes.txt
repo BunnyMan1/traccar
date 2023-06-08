@@ -1,3 +1,6 @@
+Test Server:
+- gradle test
+
 Compile Server:
 - ./gradlew assemble
 
@@ -19,14 +22,10 @@ Deploy Steps:
 - ssh into each server:
     - mkdir ./backup/<date>/
     - cp /opt/traccar/conf/traccar.xml ./backup/<date>/
-    - sudo service traccar stop
-    - cd build/
-    - unzip traccar-linux-*.zip
-    - sudo ./traccar.run
+    - sudo service traccar stop && cd build/ && unzip traccar-linux-*.zip && sudo ./traccar.run
     - Check if all okay:
         - sudo nano /opt/traccar/conf/traccar.xml
-    - cd /opt/traccar/
-    - ls -lt
+    - cd /opt/traccar/ && ls -lt
     - sudo service traccar start && tail -f /opt/traccar/logs/tracker-server.log
 - Check respective URLs, Login + Check console.
 
@@ -56,6 +55,3 @@ Test protocol message:
 Run server locally:
 - VSCode: Run with / without debugging
 - Web app: cd traccar-web/modern/ && npm run start
-
-Test Server:
-- gradle test
