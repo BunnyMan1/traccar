@@ -40,6 +40,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -47,8 +48,13 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
+import org.traccar.model.UserRestrictions;
+import org.traccar.reports.DeviceReportProvider;
+import org.traccar.reports.common.ReportExecutor;
+import javax.ws.rs.core.StreamingOutput;
 
 @Path("devices")
 @Produces(MediaType.APPLICATION_JSON)
@@ -67,9 +73,39 @@ public class DeviceResource extends BaseObjectResource<Device> {
     @Inject
     private MediaManager mediaManager;
 
+    @Inject
+    private DeviceReportProvider deviceReportProvider;
+
     public DeviceResource() {
         super(Device.class);
     }
+
+        private List<Device> getDevicesList(List<Long> deviceIds) throws StorageException {
+        List<Device> result = new LinkedList<>();
+        for (Long deviceId : deviceIds) {
+            result.addAll(storage.getObjects(Device.class, new Request(
+                    new Columns.All(),
+                    new Condition.And(
+                            new Condition.Equals("id", deviceId),
+                            new Condition.Permission(User.class, getUserId(), Device.class)))));
+        }
+        return result;
+    }
+
+    private Response executeReport(long userId, boolean mail, ReportExecutor executor, String reportType,
+            Date fromDate, Date toDate, List<Device> devices) {
+
+        StreamingOutput stream = output -> {
+            try {
+                executor.execute(output);
+            } catch (StorageException e) {
+                throw new WebApplicationException(e);
+            }
+        };
+        return Response.ok(stream)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=report.xlsx").build();
+    }
+
 
     @GET
     public Collection<Device> get(
@@ -116,6 +152,22 @@ public class DeviceResource extends BaseObjectResource<Device> {
             return storage.getObjects(baseClass, new Request(new Columns.All(), Condition.merge(conditions)));
 
         }
+    }
+
+    @Path("xlsx")
+    @GET
+    public Response getDeviceExcel(
+            @QueryParam("deviceId") List<Long> deviceIds,
+            @QueryParam("groupId") List<Long> groupIds,
+            @QueryParam("from") Date from,
+            @QueryParam("to") Date to,
+            @QueryParam("daily") boolean daily,
+            @QueryParam("mail") boolean mail) throws StorageException {
+        permissionsService.checkRestriction(getUserId(), UserRestrictions::getDisableReports);
+        return executeReport(getUserId(), mail, stream -> {
+            LogAction.logReport(getUserId(), "device", from, to, deviceIds, groupIds);
+            deviceReportProvider.getExcel(stream, getUserId(), deviceIds, groupIds, from, to, daily);
+        }, "device" + (daily ? "-daily" : ""), from, to, getDevicesList(deviceIds));
     }
 
     @Path("{id}/accumulators")
