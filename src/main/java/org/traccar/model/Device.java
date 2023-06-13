@@ -319,5 +319,28 @@ public class Device extends GroupedModel implements Disableable {
         this.address = address;
     }
 
-    
+    private String serialNumber;
+
+    @QueryIgnore
+    public String getSerialNumber() {
+        return serialNumber;
+    }
+
+    @QueryIgnore
+    public void setSerialNumber(String serialNumber) {
+        this.serialNumber = serialNumber;
+    }
+
+    private String imei;
+
+    @QueryIgnore
+    public String getImei() {
+        return imei;
+    }
+
+    @QueryIgnore
+    public void setImei(String imei) {
+        this.imei = imei;
+    }
+
 }

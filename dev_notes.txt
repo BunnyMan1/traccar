@@ -6,8 +6,7 @@ Compile Server:
 
 Compile Web Modern:
 - cd traccar-web/modern
-- npm i
-- npm run build
+- npm i && npm run build
 
 Deploy Steps:
 - Build Server

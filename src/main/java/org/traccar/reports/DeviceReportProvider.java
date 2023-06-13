@@ -24,7 +24,6 @@ import java.io.OutputStream;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Date;
 import java.util.List;
 
 public class DeviceReportProvider {
@@ -35,7 +34,7 @@ public class DeviceReportProvider {
 
     @Inject
     public DeviceReportProvider(Config config, ReportUtils reportUtils, Storage storage) {
-        this.config=config;
+        this.config = config;
         this.reportUtils = reportUtils;
         this.storage = storage;
     }
@@ -54,14 +53,22 @@ public class DeviceReportProvider {
             List<Position> latestPosition = storage.getObjects(Position.class, new Request(
                     new Columns.All(),
                     new Condition.Equals("deviceId", device.getId()),
-                    new Order("fixTime", true, 1))
-            );
+                    new Order("fixTime", true, 1)));
 
             if (!latestPosition.isEmpty()) {
                 device.setDeviceTime(latestPosition.get(0).getDeviceTime());
                 device.setLatitude(latestPosition.get(0).getLatitude());
                 device.setLongitude(latestPosition.get(0).getLongitude());
                 device.setAddress(latestPosition.get(0).getAddress());
+
+                if (device.hasAttribute("serial_number"))
+                    device.setSerialNumber(device.getString("serial_number"));
+
+                if (device.hasAttribute("serialNumber"))
+                    device.setSerialNumber(device.getString("serialNumber"));
+
+                if (device.hasAttribute("imei"))
+                    device.setImei(device.getString("imei"));
             }
             result.add(device);
         }
