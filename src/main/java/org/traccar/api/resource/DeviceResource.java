@@ -16,7 +16,6 @@
 package org.traccar.api.resource;
 
 import org.traccar.api.BaseObjectResource;
-import org.traccar.broadcast.BroadcastService;
 import org.traccar.database.MediaManager;
 import org.traccar.helper.LogAction;
 import org.traccar.model.Device;
@@ -48,7 +47,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Collection;
-import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 import org.traccar.model.UserRestrictions;
@@ -66,9 +64,6 @@ public class DeviceResource extends BaseObjectResource<Device> {
 
     @Inject
     private ConnectionManager connectionManager;
-
-    @Inject
-    private BroadcastService broadcastService;
 
     @Inject
     private MediaManager mediaManager;
@@ -93,7 +88,7 @@ public class DeviceResource extends BaseObjectResource<Device> {
     }
 
     private Response executeReport(long userId, boolean mail, ReportExecutor executor, String reportType,
-            Date fromDate, Date toDate, List<Device> devices) {
+            List<Device> devices) {
 
         StreamingOutput stream = output -> {
             try {
@@ -157,17 +152,13 @@ public class DeviceResource extends BaseObjectResource<Device> {
     @Path("xlsx")
     @GET
     public Response getDeviceExcel(
-            @QueryParam("deviceId") List<Long> deviceIds,
-            @QueryParam("groupId") List<Long> groupIds,
-            @QueryParam("from") Date from,
-            @QueryParam("to") Date to,
-            @QueryParam("daily") boolean daily,
-            @QueryParam("mail") boolean mail) throws StorageException {
+            @QueryParam("deviceId") List<Long> deviceIds
+        ) throws StorageException {
         permissionsService.checkRestriction(getUserId(), UserRestrictions::getDisableReports);
-        return executeReport(getUserId(), mail, stream -> {
-            LogAction.logReport(getUserId(), "device", from, to, deviceIds, groupIds);
-            deviceReportProvider.getExcel(stream, getUserId(), deviceIds, groupIds, from, to, daily);
-        }, "device" + (daily ? "-daily" : ""), from, to, getDevicesList(deviceIds));
+
+        return executeReport(getUserId(), false, stream -> {
+            deviceReportProvider.getExcel(stream, getUserId(), deviceIds);
+        }, "device", getDevicesList(deviceIds));
     }
 
     @Path("{id}/accumulators")

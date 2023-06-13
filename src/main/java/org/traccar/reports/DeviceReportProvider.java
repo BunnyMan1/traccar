@@ -41,10 +41,9 @@ public class DeviceReportProvider {
     }
 
     public void getExcel(OutputStream outputStream,
-            long userId, Collection<Long> deviceIds, Collection<Long> groupIds,
-            Date from, Date to, boolean daily) throws StorageException, IOException {
+            long userId, Collection<Long> deviceIds) throws StorageException, IOException {
         Collection<Device> result = new ArrayList<>();
-        for (Device device : reportUtils.getAccessibleDevices(userId, deviceIds, groupIds)) {
+        for (Device device : reportUtils.getAccessibleDevices(userId, deviceIds, new ArrayList<>())) {
             if (device.getGroupId() > 0) {
                 Group group = storage.getObject(Group.class, new Request(
                         new Columns.All(),
@@ -70,9 +69,7 @@ public class DeviceReportProvider {
         File file = Paths.get(config.getString(Keys.TEMPLATES_ROOT), "export", "device.xlsx").toFile();
         try (InputStream inputStream = new FileInputStream(file)) {
             var context = reportUtils.initializeContext(userId);
-            context.putVar("summaries", result);
-            context.putVar("from", from);
-            context.putVar("to", to);
+            context.putVar("devices", result);
             JxlsHelper.getInstance().setUseFastFormulaProcessor(false)
                     .processTemplate(inputStream, outputStream, context);
         }
