@@ -253,4 +253,71 @@ public class Device extends GroupedModel implements Disableable {
         this.overspeedGeofenceId = overspeedGeofenceId;
     }
 
+    private String groupName;
+
+    @QueryIgnore
+    public String getGroupName() {
+        return groupName;
+    }
+
+    @QueryIgnore
+    public void setGroupName(String groupName) {
+        this.groupName = groupName;
+    }
+
+    private double latitude;
+
+    @QueryIgnore
+    public double getLatitude() {
+        return latitude;
+    }
+
+    @QueryIgnore
+    public void setLatitude(double latitude) {
+        if (latitude < -90 || latitude > 90) {
+            throw new IllegalArgumentException("Latitude out of range");
+        }
+        this.latitude = latitude;
+    }
+
+    private double longitude;
+
+    @QueryIgnore
+    public double getLongitude() {
+        return longitude;
+    }
+
+    @QueryIgnore
+    public void setLongitude(double longitude) {
+        if (longitude < -180 || longitude > 180) {
+            throw new IllegalArgumentException("Longitude out of range");
+        }
+        this.longitude = longitude;
+    }
+
+    private Date deviceTime;
+
+    @QueryIgnore
+    public Date getDeviceTime() {
+        return deviceTime;
+    }
+
+    @QueryIgnore
+    public void setDeviceTime(Date deviceTime) {
+        this.deviceTime = deviceTime;
+    }
+
+    private String address;
+
+    @QueryIgnore
+    public String getAddress() {
+        return address;
+    }
+
+    @QueryIgnore
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    
 }
