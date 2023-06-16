@@ -62,8 +62,13 @@ public class SummaryReportProvider {
         SummaryReportItem result = new SummaryReportItem();
         result.setDeviceId(device.getId());
         result.setDeviceName(device.getName());
+        
+        boolean useDistanceColumn = config.getBoolean(Keys.REPORT_USE_DISTANCE_COLUMN);
+
         var totalDistance = 0.0;
-        var totalDistanceValid = true;
+        var totalDistanceValid = useDistanceColumn;
+
+
         if (positions != null && !positions.isEmpty()) {
             Position firstPosition = null;
             Position previousPosition = null;
@@ -84,7 +89,9 @@ public class SummaryReportProvider {
                     }
                 }
             }
+
             boolean ignoreOdometer = config.getBoolean(Keys.REPORT_IGNORE_ODOMETER);
+
             if (totalDistanceValid) {
                 result.setDistance(totalDistance);
             } else {

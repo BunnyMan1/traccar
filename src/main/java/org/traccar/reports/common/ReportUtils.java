@@ -224,9 +224,13 @@ public class ReportUtils {
         Position startTrip = positions.get(startIndex);
         Position endTrip = positions.get(endIndex);
 
+        boolean useDistanceColumn = config.getBoolean(Keys.REPORT_USE_DISTANCE_COLUMN);
+
         double speedMax = 0;
+
         double totalDistance = 0.0;
-        var totalDistanceValid = true;
+        var totalDistanceValid = useDistanceColumn;
+
         for (int i = startIndex; i <= endIndex; i++) {
             double speed = positions.get(i).getSpeed();
             if (speed > speedMax) {
