@@ -54,9 +54,18 @@ import com.google.inject.servlet.RequestScoper;
 import com.google.inject.servlet.ServletScopes;
 
 import jakarta.inject.Inject;
-import net.fortuna.ical4j.model.Period;
 
-public class TaskReports implements ScheduleTask {
+import java.time.Instant;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+
+public class TaskReports extends SingleScheduleTask {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TaskReports.class);
 
@@ -89,12 +98,12 @@ public class TaskReports implements ScheduleTask {
                 var lastEvents = calendar.findPeriods(lastCheck);
                 var currentEvents = calendar.findPeriods(currentCheck);
 
-                Set<Period> finishedEvents = new HashSet<>(lastEvents);
+                Set<Period<Instant>> finishedEvents = new HashSet<>(lastEvents);
                 finishedEvents.removeAll(currentEvents);
-                for (Period period : finishedEvents) {
+                for (Period<Instant> period : finishedEvents) {
                     RequestScoper scope = ServletScopes.scopeRequest(Collections.emptyMap());
                     try (RequestScoper.CloseableScope ignored = scope.open()) {
-                        executeReport(report, period.getStart(), period.getEnd());
+                        executeReport(report, Date.from(period.getStart()), Date.from(period.getEnd()));
                     }
                 }
             }
@@ -163,7 +172,7 @@ public class TaskReports implements ScheduleTask {
 
             LogAction.report(user.getId(), true, report.getType(), from, to, deviceIds, groupIds);
             switch (report.getType()) {
-                case "events":
+                case "events" -> {
                     var eventsReportProvider = injector.getInstance(EventsReportProvider.class);
                     reportMailer.sendAsync(user.getId(), stream -> eventsReportProvider.getExcel(
                             stream, user.getId(), deviceIds, groupIds, List.of(), from, to),

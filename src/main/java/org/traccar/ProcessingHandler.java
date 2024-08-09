@@ -80,7 +80,8 @@ public class ProcessingHandler extends ChannelInboundHandlerAdapter implements B
     private final List<BasePositionHandler> positionHandlers;
     private final List<BaseEventHandler> eventHandlers;
     private final PostProcessHandler postProcessHandler;
-    // private static final Logger LOGGER = LoggerFactory.getLogger(ProcessingHandler.class);
+    // private static final Logger LOGGER =
+    // LoggerFactory.getLogger(ProcessingHandler.class);
 
     private final CacheManager cacheManager;
 
@@ -140,29 +141,33 @@ public class ProcessingHandler extends ChannelInboundHandlerAdapter implements B
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (msg instanceof Position) {
+        if (msg instanceof Position position) {
+
+            // * CUSTOM CODE START * //
 
             // Position position = (Position) msg;
             // Device device = cacheManager.getObject(Device.class, position.getDeviceId());
-
             // if (!position.hasAttribute(Position.KEY_HOURS)) {
 
-                // LOGGER.warn("Position has no hours attribute. Device Id: " + position.getDeviceId()
-                        // + ", Newly Inserting Position Id: " + position.getId());
+            // LOGGER.warn("Position has no hours attribute. Device Id: " +
+            // position.getDeviceId()
+            // + ", Newly Inserting Position Id: " + position.getId());
 
-                // LOGGER.warn("Device's latest position id: " + device.getPositionId());
+            // LOGGER.warn("Device's latest position id: " + device.getPositionId());
 
-                // Position cachePresentLatestPosition = cacheManager.getPosition(device.getId());
+            // Position cachePresentLatestPosition =
+            // cacheManager.getPosition(device.getId());
 
-                // if (cachePresentLatestPosition != null) {
-                //     LOGGER.warn("Cache present latest position item id for this device: "
-                //             + cachePresentLatestPosition.getId());
-                // } else {
-                //     LOGGER.warn("No cache present latest position item for this device id: " + device.getId());
-                // }
+            // if (cachePresentLatestPosition != null) {
+            // LOGGER.warn("Cache present latest position item id for this device: "
+            // + cachePresentLatestPosition.getId());
+            // } else {
+            // LOGGER.warn("No cache present latest position item for this device id: " +
+            // device.getId());
             // }
-
-            bufferingManager.accept(ctx, (Position) msg);
+            // }
+            // * CUSTOM CODE END * //
+            bufferingManager.accept(ctx, position);
         } else {
             super.channelRead(ctx, msg);
         }
