@@ -34,7 +34,7 @@
 
     <entry key='filter.enable'>true</entry>
     <entry key='filter.zero'>true</entry>
-     <entry key='filter.distance'>20</entry>
+    <entry key='filter.distance'>20</entry>
     <!-- <entry key='filter.maxSpeed'>25000</entry> -->
     <!-- <entry key='filter.invalid'>true</entry> -->
     <!-- <entry key='filter.duplicate'>true</entry> -->
@@ -47,4 +47,5 @@
     <entry key='filter.distanceWhenIgnitionOffDevices'>230,654,1179</entry>
 
     <entry key='report.ignoreOdometer'>false</entry>
+    <entry key='protocol.its.logInput'>true</entry>
 </properties>

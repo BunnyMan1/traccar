@@ -22,6 +22,7 @@ import org.traccar.PipelineBuilder;
 import org.traccar.TrackerServer;
 import org.traccar.config.Config;
 import org.traccar.model.Command;
+import org.traccar.config.Keys;
 
 import jakarta.inject.Inject;
 
@@ -35,9 +36,16 @@ public class ItsProtocol extends BaseProtocol {
         addServer(new TrackerServer(config, getName(), false) {
             @Override
             protected void addProtocolHandlers(PipelineBuilder pipeline, Config config) {
+
                 pipeline.addLast(new ItsFrameDecoder());
                 pipeline.addLast(new StringEncoder());
                 pipeline.addLast(new StringDecoder());
+
+                // Add logging handler if enabled in config
+                if (config.getBoolean(Keys.PROTOCOL_ITS_LOG_INPUT)) {
+                    pipeline.addLast(new ItsLoggingHandler());
+                }
+
                 pipeline.addLast(new ItsProtocolDecoder(ItsProtocol.this));
             }
         });
