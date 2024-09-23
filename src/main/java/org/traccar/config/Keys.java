@@ -1985,4 +1985,11 @@ public final class Keys {
             "broadcast.port",
             List.of(KeyType.CONFIG));
 
+    /**
+     * Enable logging of input messages for ITS protocol.
+     */
+    public static final ConfigKey<Boolean> PROTOCOL_ITS_LOG_INPUT = new BooleanConfigKey(
+            "protocol.its.logInput",
+            List.of(KeyType.CONFIG));
+
 }
